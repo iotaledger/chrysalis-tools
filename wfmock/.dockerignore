@@ -1,0 +1,6 @@
+# ignore Go test files
+**/_test.go
+**/testdata
+
+# ignore all markdown files
+*.md
