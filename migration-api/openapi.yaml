@@ -1,0 +1,128 @@
+openapi: 3.0.3
+info:
+  title: Migration REST API
+  description: This document specifies the REST API for the IOTA migration service.
+  contact:
+    email: contact@iota.org
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+  version: 1.0.0
+externalDocs:
+  description: Find out more about IOTA
+  url: 'https://iota.org'
+servers:
+  - url: 'http://127.0.0.1:8484'
+paths:
+  /info:
+    get:
+      summary: Returns overall information about the state of the migration.
+      responses:
+        '200':
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoResponse'
+              examples:
+                default:
+                  $ref: '#/components/examples/get-info-response-example'
+        '500':
+          description: "Unsuccessful operation: indicates that an unexpected, internal server error happened which prevented the service from fulfilling the request."
+components:
+  examples:
+    get-info-response-example:
+      value:
+        treasuryTokens: "2968589348670679834"
+        tokensMigrated: "7346438674586723"
+        legacyFundsLocked:
+          tokensTotal: "39485828495856"
+          migrationAddressesTotal: 1403943
+          tokensPercentageOfTotalSupply: 0.34
+        recentMigrations:
+          - tailTransactionHash: "KCGLBWPLCKRIHCHASCCPBMYDXBMAXGZGMSEBFHYCNOMXPRGBCJBXPAKVCDWCGAPUYVFRUBULYJCURWUGW"
+            value: "5000000"
+            targetEd25519Address: "efdc112efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3"
+          - tailTransactionHash: "LKLDRXVJIHIFKGYUEGVFMNUKPYEXZWOMAX9LRLRRAVQRVCZQRDIMSRAFAPEAEIXIPQXLLYFYFVDURIQCW"
+            value: "1000000000"
+            targetEd25519Address: "afdc312efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3"
+        recentReceipts:
+          - embeddedInMilestoneIndex: 10024
+            legacyMilestoneIndex: 1004394
+            funds:
+              - tailTransactionHash: "KCGLBWPLCKRIHCHASCCPBMYDXBMAXGZGMSEBFHYCNOMXPRGBCJBXPAKVCDWCGAPUYVFRUBULYJCURWUGW"
+                value: "5000000"
+                targetEd25519Address: "efdc112efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3"
+              - tailTransactionHash: "LKLDRXVJIHIFKGYUEGVFMNUKPYEXZWOMAX9LRLRRAVQRVCZQRDIMSRAFAPEAEIXIPQXLLYFYFVDURIQCW"
+                value: "1000000000"
+                targetEd25519Address: "afdc312efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3"
+  schemas:
+    InfoResponse:
+      description: Returns general information about the migration process.
+      properties:
+        treasuryTokens:
+          type: string
+          description: The amount of tokens residing within the treasury on the Chrysalis Phase 2 network.
+        tokensMigrated:
+          type: string
+          description: The amount of tokens migrated into the new Chrysalis Phae 2 network.
+        legacyFundsLocked:
+          type: object
+          description: Holds information about the legacy funds locked/migrated.
+          properties:
+            tokensTotal:
+              type: string
+              description: The total of tokens locked for migration.
+            migrationAddressesTotal:
+              type: number
+              description: The total amount of migration addresses.
+            tokensPercentageOfTotalSupply:
+              type: number
+              description: The percentage of tokens locked for migration against the total supply.
+        recentMigrations:
+          type: array
+          description: Holds the 50 most recent migrations as seen in the legacy network.
+          items:
+            type: object
+            properties:
+              tailTransactionHash:
+                type: string
+                description: The hash of the tail transaction which locked the funds.
+              value:
+                type: string
+                description: The amount of tokens locked
+              targetEd25519Address:
+                type: string
+                description: The hex encoded Ed25519 address to which the funds will be/are migrated to.
+        recentReceipts:
+          type: array
+          description: Holds up to the last 5 receipts issued in the Chrysalis Phase 2 network.
+          items:
+            type: object
+            properties:
+              embbeddedInMilestoneIndex:
+                type: number
+                description: The index in which this receipt was embedded in the Chrysalis Phase 2 network.
+              legacyMilestoneIndex:
+                type: number
+                description: The index of the legacy milestone in which these funds were locked.
+              funds:
+                type: array
+                description: The entries of funds to mint with this receipt.
+                items:
+                  type: object
+                  properties:
+                    tailTransactionHash:
+                      type: string
+                      description: The hash of the tail transaction which locked the funds.
+                    value:
+                      type: string
+                      description: The amount of tokens locked
+                    targetEd25519Address:
+                      type: string
+                      description: The hex encoded Ed25519 address to which the funds will be/are migrated to.
+      required:
+        - treasury
+        - legacyFundsLocked
+        - recentMigrations
+        - recentReceipts
