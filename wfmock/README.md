@@ -11,5 +11,5 @@ See the `pkg/config/config.go` file for a description of the configuration param
 
 To start the mock providing a new config file and publishing its port use the following:
 ```
-docker run -v ${PWD}/config.json:/app/config.json -p 127.0.0.1:14266:14266 wfmock
+docker run -v ${PWD}/config.json:/app/config.json -p 127.0.0.1:14265:14265 wfmock
 ```
