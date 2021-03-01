@@ -20,10 +20,11 @@ func ReadConfig() (*Config, error) {
 }
 
 type Config struct {
-	ListenAddress              string           `json:"listenAddress"`
-	MinTokenAmountForMigration int              `json:"minTokenAmountForMigration"`
-	LegacyNode                 LegacyNodeConfig `json:"legacyNode"`
-	C2Node                     C2NodeConfig     `json:"c2Node"`
+	ListenAddress                  string           `json:"listenAddress"`
+	MaxMilestonesToQueryForEntries int              `json:"maxMilestonesToQueryForEntries"`
+	MinTokenAmountForMigration     int              `json:"minTokenAmountForMigration"`
+	LegacyNode                     LegacyNodeConfig `json:"legacyNode"`
+	C2Node                         C2NodeConfig     `json:"c2Node"`
 }
 
 type LegacyNodeConfig struct {

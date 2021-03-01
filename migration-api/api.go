@@ -109,8 +109,56 @@ func Start(config *Config) error {
 	})
 
 	e.GET("/recentlyLocked/:numEntries", func(c echo.Context) error {
+		numEntriesWanted, err := strconv.Atoi(c.Param("numEntries"))
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unable to parse numEntries parameter: %w", err))
+		}
 
-		return nil
+		// use the latest solid milestone as a base and then go back a max amount of milestones to collect entries
+		nodeInfo, err := legacyAPI.GetNodeInfo()
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unable to parse numEntries parameter: %w", err))
+		}
+
+		target := nodeInfo.LatestSolidSubtangleMilestoneIndex - int64(config.MaxMilestonesToQueryForEntries)
+		switch {
+		case target < 0:
+			target = 0
+		}
+
+		// we can't check for the pruning index since it is not part of the legacy node info
+		var funds []Funds
+
+	out:
+		for msIndex := nodeInfo.LatestSolidSubtangleMilestoneIndex; msIndex > target; msIndex-- {
+			res, err := chrysalis_tools.QueryLedgerDiffExtended(config.LegacyNode.URI, int(msIndex))
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to extended ledger diff for milestone %d: %w", msIndex, err))
+			}
+
+			for _, tx := range res.ConfirmedTxWithValue {
+				if tx.Value <= 0 {
+					continue
+				}
+
+				edAddr, err := address.ParseMigrationAddress(tx.Address)
+				if err != nil {
+					continue
+				}
+
+				funds = append(funds, Funds{
+					TailTransactionHash:  tx.TailTxHash,
+					Value:                uint64(tx.Value),
+					TargetEd25519Address: hex.EncodeToString(edAddr[:]),
+				})
+
+				if len(funds) == numEntriesWanted {
+					break out
+				}
+			}
+		}
+
+		return c.JSON(http.StatusOK, funds)
 	})
 
 	e.GET("/recentlyMigrated/:numReceipts", func(c echo.Context) error {
@@ -121,7 +169,7 @@ func Start(config *Config) error {
 
 		numReceiptsWanted, err := strconv.Atoi(c.Param("numReceipts"))
 		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unable to parse numReceipts paramter: %w", err))
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unable to parse numReceipts parameter: %w", err))
 		}
 
 		recentReceipts := make([]*RecentReceipt, numReceiptsWanted)

@@ -1,6 +1,7 @@
 {
   "listenAddress": "0.0.0.0:8484",
   "minTokenAmountForMigration": 1000000,
+  "maxMilestonesToQueryForEntries": 20,
   "legacyNode": {
     "uri": "http://localhost:14265",
     "timeout": "10s"
