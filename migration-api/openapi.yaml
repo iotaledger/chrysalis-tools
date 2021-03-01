@@ -19,7 +19,7 @@ paths:
       summary: Returns overall information about the state of the migration.
       responses:
         '200':
-          description: "Successful operation."
+          description: Successful operation.
           content:
             application/json:
               schema:
@@ -28,10 +28,10 @@ paths:
                 default:
                   $ref: '#/components/examples/get-state-response-example'
         '500':
-          description: "Unsuccessful operation: indicates that an unexpected, internal server error happened which prevented the service from fulfilling the request."
-  /recentlyLocked/{numEntries}:
+          description: 'Unsuccessful operation: indicates that an unexpected, internal server error happened which prevented the service from fulfilling the request.'
+  '/recentlyLocked/{numEntries}':
     get:
-      summary: Returns the recently locked funds on the legacy funds.
+      summary: Returns the recently locked funds on the legacy network.
       parameters:
         - in: path
           name: numEntries
@@ -42,7 +42,7 @@ paths:
           description: The number of recently locked funds entries to return.
       responses:
         '200':
-          description: "Successful operation."
+          description: Successful operation.
           content:
             application/json:
               schema:
@@ -51,8 +51,8 @@ paths:
                 default:
                   $ref: '#/components/examples/get-recently-locked-example'
         '500':
-          description: "Unsuccessful operation: indicates that an unexpected, internal server error happened which prevented the service from fulfilling the request."
-  /recentlyMinted/{numReceipts}:
+          description: 'Unsuccessful operation: indicates that an unexpected, internal server error happened which prevented the service from fulfilling the request.'
+  '/recentlyMinted/{numReceipts}':
     get:
       summary: Returns the recently observed receipts in the Chrysalis Phase 2 network.
       parameters:
@@ -65,7 +65,7 @@ paths:
           description: The number of recent receipts to return.
       responses:
         '200':
-          description: "Successful operation."
+          description: Successful operation.
           content:
             application/json:
               schema:
@@ -74,38 +74,36 @@ paths:
                 default:
                   $ref: '#/components/examples/get-recently-minted-example'
         '500':
-          description: "Unsuccessful operation: indicates that an unexpected, internal server error happened which prevented the service from fulfilling the request."
+          description: 'Unsuccessful operation: indicates that an unexpected, internal server error happened which prevented the service from fulfilling the request.'
 components:
   examples:
     get-state-response-example:
       value:
-        treasuryTokens: 2968589348670679834
+        treasuryTokens: 2968589348670680000
         tokensMigrated: 7346438674586723
         legacyFundsLocked:
           tokensTotal: 39485828495856
           migrationAddressesTotal: 1403943
           tokensPercentageOfTotalSupply: 0.34
-
     get-recently-locked-example:
       value:
-        - tailTransactionHash: "KCGLBWPLCKRIHCHASCCPBMYDXBMAXGZGMSEBFHYCNOMXPRGBCJBXPAKVCDWCGAPUYVFRUBULYJCURWUGW"
+        - tailTransactionHash: KCGLBWPLCKRIHCHASCCPBMYDXBMAXGZGMSEBFHYCNOMXPRGBCJBXPAKVCDWCGAPUYVFRUBULYJCURWUGW
           value: 5000000
-          targetEd25519Address: "efdc112efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3"
-        - tailTransactionHash: "LKLDRXVJIHIFKGYUEGVFMNUKPYEXZWOMAX9LRLRRAVQRVCZQRDIMSRAFAPEAEIXIPQXLLYFYFVDURIQCW"
+          targetEd25519Address: efdc112efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3
+        - tailTransactionHash: LKLDRXVJIHIFKGYUEGVFMNUKPYEXZWOMAX9LRLRRAVQRVCZQRDIMSRAFAPEAEIXIPQXLLYFYFVDURIQCW
           value: 1000000000
-          targetEd25519Address: "afdc312efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3"
-
+          targetEd25519Address: afdc312efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3
     get-recently-minted-example:
       value:
         - embeddedInMilestoneIndex: 10024
           legacyMilestoneIndex: 1004394
           funds:
-            - tailTransactionHash: "KCGLBWPLCKRIHCHASCCPBMYDXBMAXGZGMSEBFHYCNOMXPRGBCJBXPAKVCDWCGAPUYVFRUBULYJCURWUGW"
+            - tailTransactionHash: KCGLBWPLCKRIHCHASCCPBMYDXBMAXGZGMSEBFHYCNOMXPRGBCJBXPAKVCDWCGAPUYVFRUBULYJCURWUGW
               value: 5000000
-              targetEd25519Address: "efdc112efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3"
-            - tailTransactionHash: "LKLDRXVJIHIFKGYUEGVFMNUKPYEXZWOMAX9LRLRRAVQRVCZQRDIMSRAFAPEAEIXIPQXLLYFYFVDURIQCW"
+              targetEd25519Address: efdc112efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3
+            - tailTransactionHash: LKLDRXVJIHIFKGYUEGVFMNUKPYEXZWOMAX9LRLRRAVQRVCZQRDIMSRAFAPEAEIXIPQXLLYFYFVDURIQCW
               value: 1000000000
-              targetEd25519Address: "afdc312efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3"
+              targetEd25519Address: afdc312efe262b304bcf379b26c31bad029f616ee3ec4aa6345a366e4c9e43a3
   schemas:
     StateResponse:
       description: Returns general information about the migration process's state.
@@ -133,7 +131,6 @@ components:
         - treasuryTokens
         - tokensMigrated
         - legacyFundsLocked
-
     RecentlyLockedResponse:
       description: Holds the last N most recently seen migration lockings as in the legacy network.
       type: array
@@ -149,7 +146,6 @@ components:
           targetEd25519Address:
             type: string
             description: The hex encoded Ed25519 address to which the funds will be/are migrated to.
-
     RecentlyMintedResponse:
       description: Holds the last N most recently observed receipts on the Chrysalis Phase 2 network.
       type: array
