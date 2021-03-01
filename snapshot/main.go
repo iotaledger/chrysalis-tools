@@ -3,16 +3,11 @@
 package main
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"sort"
 	"time"
@@ -20,10 +15,10 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/chrysalis-tools"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/consts"
-	"github.com/iotaledger/iota.go/trinary"
 	"github.com/iotaledger/iota.go/v2"
 	"github.com/spf13/pflag"
 	"golang.org/x/crypto/blake2b"
@@ -36,12 +31,6 @@ var (
 	genesisSnapshotFileName      = pflag.String("genesis-snapshot-file", "genesis_snapshot.bin", "the name of the genesis snapshot file to generate")
 	genesisSnapshotFileNetworkID = pflag.String("genesis-snapshot-file-network-id", "mainnet1", "the network ID to put into the genesis snapshot")
 )
-
-type ledgerQueryResponse struct {
-	Balances       map[trinary.Hash]uint64 `json:"balances"`
-	MilestoneIndex uint32                  `json:"milestoneIndex"`
-	Duration       int                     `json:"duration"`
-}
 
 func must(err error) {
 	if err != nil {
@@ -71,33 +60,8 @@ func main() {
 	log.Printf("legacy node state: lsmi/lsm %d/%d", nodeInfo.LatestSolidSubtangleMilestoneIndex, nodeInfo.LatestMilestoneIndex)
 	log.Printf("fetching ledger state at %d, this might take a while...go grab a coffee...", nodeInfo.LatestSolidSubtangleMilestoneIndex)
 
-	req := &http.Request{
-		Method: http.MethodPost,
-		URL: func() *url.URL {
-			u, err := url.Parse(*legacyNodeURI)
-			must(err)
-			return u
-		}(),
-		Header: map[string][]string{
-			"Content-Type":       {"application/json"},
-			"X-IOTA-API-Version": {"1"},
-		},
-		Body: func() io.ReadCloser {
-			cmd := []byte(fmt.Sprintf(`{"command": "getLedgerState", "targetIndex": %d}`, nodeInfo.LatestSolidSubtangleMilestoneIndex))
-			return ioutil.NopCloser(bytes.NewReader(cmd))
-		}(),
-	}
-
-	http.DefaultClient.Timeout = 0
-	res, err := http.DefaultClient.Do(req)
+	resObj, err := chrysalis_tools.QueryLedgerState(*legacyNodeURI, int(nodeInfo.LatestSolidSubtangleMilestoneIndex))
 	must(err)
-	defer res.Body.Close()
-
-	var resObj ledgerQueryResponse
-	jsonRes, err := ioutil.ReadAll(res.Body)
-	must(err)
-
-	must(json.Unmarshal(jsonRes, &resObj))
 
 	log.Printf("total ledger entries: %d", len(resObj.Balances))
 	migrations := make(map[[32]byte]uint64)
