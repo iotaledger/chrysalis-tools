@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/iotaledger/chrysalis-tools"
+	"github.com/iotaledger/chrysalis-tools/common"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/consts"
@@ -84,7 +84,7 @@ func Start(config *Config) error {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to query node info from legacy node: %w", err))
 		}
 
-		ledgerQueryRes, err := chrysalis_tools.QueryLedgerState(config.LegacyNode.URI, int(legacyNodeInfo.LatestSolidSubtangleMilestoneIndex))
+		ledgerQueryRes, err := common.QueryLedgerState(config.LegacyNode.URI, int(legacyNodeInfo.LatestSolidSubtangleMilestoneIndex))
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to query ledger state from legacy node for milestone %d: %w", legacyNodeInfo.LatestSolidSubtangleMilestoneIndex, err))
 		}
@@ -131,7 +131,7 @@ func Start(config *Config) error {
 
 	out:
 		for msIndex := nodeInfo.LatestSolidSubtangleMilestoneIndex; msIndex > target; msIndex-- {
-			res, err := chrysalis_tools.QueryLedgerDiffExtended(config.LegacyNode.URI, int(msIndex))
+			res, err := common.QueryLedgerDiffExtended(config.LegacyNode.URI, int(msIndex))
 			if err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to extended ledger diff for milestone %d: %w", msIndex, err))
 			}

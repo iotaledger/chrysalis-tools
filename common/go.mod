@@ -1,4 +1,4 @@
-module github.com/iotaledger/chrysalis-tools
+module github.com/iotaledger/chrysalis-tools/common
 
 go 1.16
 
