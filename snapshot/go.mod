@@ -6,6 +6,7 @@ replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-202102
 
 require (
 	github.com/gohornet/hornet v0.5.7-0.20210225145446-c5a8f5ac0521
+	github.com/iotaledger/chrysalis-tools/common v0.0.0-20210302085527-49aef3f01273
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7
 	github.com/iotaledger/iota.go/v2 v2.0.0-20210218145050-36683a2a177c
 	github.com/spf13/pflag v1.0.5
