@@ -11,3 +11,5 @@ for the Open API Specification.
 - The legacy node must allow HTTP API calls to `getLedgerState` and `getLedgerDiffExt`.
 - The C2 node must allow HTTP API calls to `/receipts`/`/receipts/:migratedAt`/`/treasury`
 
+Build a docker container with `docker build -t migration-api:dev .` and either alter config.json beforehand or mount it
+into the container at `/app/config.json`. Per default, the service listens on `0.0.0.0:8484`
