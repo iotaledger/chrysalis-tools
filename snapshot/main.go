@@ -15,7 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/iotaledger/chrysalis-tools"
+	"github.com/iotaledger/chrysalis-tools/common"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/consts"
@@ -60,7 +60,7 @@ func main() {
 	log.Printf("legacy node state: lsmi/lsm %d/%d", nodeInfo.LatestSolidSubtangleMilestoneIndex, nodeInfo.LatestMilestoneIndex)
 	log.Printf("fetching ledger state at %d, this might take a while...go grab a coffee...", nodeInfo.LatestSolidSubtangleMilestoneIndex)
 
-	resObj, err := chrysalis_tools.QueryLedgerState(*legacyNodeURI, int(nodeInfo.LatestSolidSubtangleMilestoneIndex))
+	resObj, err := common.QueryLedgerState(*legacyNodeURI, int(nodeInfo.LatestSolidSubtangleMilestoneIndex))
 	must(err)
 
 	log.Printf("total ledger entries: %d", len(resObj.Balances))

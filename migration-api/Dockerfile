@@ -16,7 +16,7 @@ RUN go mod download
 RUN go mod verify
 
 # Copy everything from the current directory to the PWD(Present Working Directory) inside the container
-COPY cmd .
+COPY . .
 
 # Build the binary
 RUN go build -ldflags='-w -s' -o /app/migration-api
