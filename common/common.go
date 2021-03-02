@@ -1,4 +1,4 @@
-package chrysalis_tools
+package common
 
 import (
 	"bytes"
@@ -9,18 +9,19 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/gohornet/hornet/plugins/webapi"
 	"github.com/iotaledger/iota.go/trinary"
 )
 
-type LedgerQueryResponse struct {
-	Balances       map[trinary.Hash]uint64 `json:"balances"`
-	MilestoneIndex uint32                  `json:"milestoneIndex"`
-	Duration       int                     `json:"duration"`
-}
+type (
+	GetLedgerStateReturn struct {
+		Balances       map[trinary.Hash]uint64 `json:"balances"`
+		MilestoneIndex uint32                  `json:"milestoneIndex"`
+		Duration       int                     `json:"duration"`
+	}
+)
 
 // QueryLedgerState queries for the ledger state given the legacy node URI and target LSMI.
-func QueryLedgerState(legacyNodeURI string, lsmi int) (*LedgerQueryResponse, error) {
+func QueryLedgerState(legacyNodeURI string, lsmi int) (*GetLedgerStateReturn, error) {
 	req := buildLegacyRequest(legacyNodeURI, fmt.Sprintf(`{"command": "getLedgerState", "targetIndex": %d}`, lsmi))
 	http.DefaultClient.Timeout = 0
 	res, err := http.DefaultClient.Do(req)
@@ -29,7 +30,7 @@ func QueryLedgerState(legacyNodeURI string, lsmi int) (*LedgerQueryResponse, err
 	}
 	defer res.Body.Close()
 
-	var resObj LedgerQueryResponse
+	var resObj GetLedgerStateReturn
 	jsonRes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body from ledger state query response: %w", err)
@@ -42,8 +43,40 @@ func QueryLedgerState(legacyNodeURI string, lsmi int) (*LedgerQueryResponse, err
 	return &resObj, nil
 }
 
+type (
+	GetLedgerDiffExtReturn struct {
+		ConfirmedTxWithValue      []*TxHashWithValue     `json:"confirmedTxWithValue"`
+		ConfirmedBundlesWithValue []*BundleWithValue     `json:"confirmedBundlesWithValue"`
+		Diff                      map[trinary.Hash]int64 `json:"diff"`
+		MilestoneIndex            uint32                 `json:"milestoneIndex"`
+		Duration                  int                    `json:"duration"`
+	}
+
+	TxHashWithValue struct {
+		TxHash     trinary.Hash `mapstructure:"txHash"`
+		TailTxHash trinary.Hash `mapstructure:"tailTxHash"`
+		BundleHash trinary.Hash `mapstructure:"bundleHash"`
+		Address    trinary.Hash `mapstructure:"address"`
+		Value      int64        `mapstructure:"value"`
+	}
+
+	BundleWithValue struct {
+		BundleHash trinary.Hash   `mapstructure:"bundleHash"`
+		TailTxHash trinary.Hash   `mapstructure:"tailTxHash"`
+		LastIndex  uint64         `mapstructure:"lastIndex"`
+		Txs        []*TxWithValue `mapstructure:"txs"`
+	}
+
+	TxWithValue struct {
+		TxHash  trinary.Hash `mapstructure:"txHash"`
+		Address trinary.Hash `mapstructure:"address"`
+		Index   uint64       `mapstructure:"index"`
+		Value   int64        `mapstructure:"value"`
+	}
+)
+
 // QueryLedgerDiffExtended queries for an extended ledger diff of a given milestone.
-func QueryLedgerDiffExtended(legacyNodeURI string, milestoneIndex int) (*webapi.GetLedgerDiffExtReturn, error) {
+func QueryLedgerDiffExtended(legacyNodeURI string, milestoneIndex int) (*GetLedgerDiffExtReturn, error) {
 	req := buildLegacyRequest(legacyNodeURI, fmt.Sprintf(`{"command": "getLedgerDiffExt", "milestoneIndex": %d}`, milestoneIndex))
 	http.DefaultClient.Timeout = 0
 	res, err := http.DefaultClient.Do(req)
@@ -52,7 +85,7 @@ func QueryLedgerDiffExtended(legacyNodeURI string, milestoneIndex int) (*webapi.
 	}
 	defer res.Body.Close()
 
-	var resObj webapi.GetLedgerDiffExtReturn
+	var resObj GetLedgerDiffExtReturn
 	jsonRes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body from ledger extended diff response: %w", err)

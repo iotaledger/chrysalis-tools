@@ -1,6 +1,7 @@
-package migration_api
+package api
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/spf13/viper"
@@ -25,6 +26,14 @@ type Config struct {
 	MinTokenAmountForMigration     int              `json:"minTokenAmountForMigration"`
 	LegacyNode                     LegacyNodeConfig `json:"legacyNode"`
 	C2Node                         C2NodeConfig     `json:"c2Node"`
+}
+
+func (c *Config) JSONString() string {
+	configJson, err := json.MarshalIndent(c, "", "   ")
+	if err != nil {
+		panic(err)
+	}
+	return string(configJson)
 }
 
 type LegacyNodeConfig struct {

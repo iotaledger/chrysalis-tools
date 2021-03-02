@@ -1,4 +1,4 @@
-package migration_api
+package api
 
 import (
 	"context"
