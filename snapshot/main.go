@@ -115,6 +115,7 @@ func main() {
 			totalMigration += entry.balance
 			continue
 		}
+
 		if entry.balance >= *minMigratedFundsAmount {
 			eligibleAddrsForMigration++
 			eligibleAddrsTokensTotal += entry.balance
@@ -131,7 +132,7 @@ func main() {
 
 	genesisTreasuryOutput := &utxo.TreasuryOutput{
 		MilestoneID: iota.MilestoneID{},
-		Amount:      consts.TotalSupply - eligibleAddrsTokensTotal,
+		Amount:      consts.TotalSupply - totalMigration,
 		Spent:       false,
 	}
 
@@ -162,9 +163,11 @@ func main() {
 		copy(edSeri[:], migration.ed25519Addr[:])
 		output.Address = edSeri
 
-		migrationOutputs = append(migrationOutputs)
+		migrationOutputs = append(migrationOutputs, output)
 		outputIndex++
 	}
+
+	supplyInSnapshot := genesisTreasuryOutput.Amount
 
 	var currentOutput int
 
@@ -179,15 +182,20 @@ func main() {
 		// no SEPs either
 		return nil, nil
 	}, func() (*snapshot.Output, error) {
-		if len(migrationOutputs) == 0 || currentOutput+1 == len(migrationOutputs) {
+		if len(migrationOutputs) == 0 || currentOutput == len(migrationOutputs) {
 			return nil, nil
 		}
 		// write out migrated funds
 		output := migrationOutputs[currentOutput]
 		currentOutput++
+		supplyInSnapshot += output.Amount
 		return output, nil
 	}, func() (*snapshot.MilestoneDiff, error) {
 		// no milestone diffs within genesis snapshot
 		return nil, nil
 	}))
+
+	if supplyInSnapshot != consts.TotalSupply {
+		panic(fmt.Sprintf("supply in genesis snapshot does not equal total supply: %d vs. %d", supplyInSnapshot, consts.TotalSupply))
+	}
 }
