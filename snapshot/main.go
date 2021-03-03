@@ -171,6 +171,17 @@ func main() {
 
 	var currentOutput int
 
+	nullHashAdded := false
+	solidEntryPointProducerFunc := func() (hornet.MessageID, error) {
+		if nullHashAdded {
+			return nil, nil
+		}
+
+		nullHashAdded = true
+
+		return hornet.GetNullMessageID(), nil
+	}
+
 	must(snapshot.StreamSnapshotDataTo(genesisSnapshotFile, *genesisSnapshotTimestamp, &snapshot.FileHeader{
 		Version:              snapshot.SupportedFormatVersion,
 		Type:                 0,
@@ -178,10 +189,7 @@ func main() {
 		SEPMilestoneIndex:    0,
 		LedgerMilestoneIndex: 0,
 		TreasuryOutput:       genesisTreasuryOutput,
-	}, func() (hornet.MessageID, error) {
-		// no SEPs either
-		return nil, nil
-	}, func() (*snapshot.Output, error) {
+	}, solidEntryPointProducerFunc, func() (*snapshot.Output, error) {
 		if len(migrationOutputs) == 0 || currentOutput == len(migrationOutputs) {
 			return nil, nil
 		}
