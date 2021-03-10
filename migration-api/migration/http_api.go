@@ -1,14 +1,15 @@
-package api
+package migration
 
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"sort"
 	"strconv"
-	"time"
 
 	"github.com/iotaledger/chrysalis-tools/common"
 	"github.com/iotaledger/iota.go/address"
@@ -17,8 +18,6 @@ import (
 	"github.com/iotaledger/iota.go/v2"
 	"github.com/labstack/echo/v4"
 )
-
-var e = echo.New()
 
 // StateResponse contains the information of a /state response.
 type StateResponse struct {
@@ -48,26 +47,43 @@ type RecentReceipt struct {
 	Funds                  []Funds `json:"funds"`
 }
 
-// Starts the API.
-func Start(config *Config) error {
-	e.HideBanner = true
+// NewHTTPAPIService creates a new HTTPAPIService.
+func NewHTTPAPIService(e *echo.Echo, listenAddr string, cfg *HTTPAPIServiceConfig) *HTTPAPIService {
+	return &HTTPAPIService{cfg: cfg, listenAddr: listenAddr, e: e}
+}
+
+// HTTPAPIService serves an API to query for migration related data.
+type HTTPAPIService struct {
+	cfg        *HTTPAPIServiceConfig
+	e          *echo.Echo
+	listenAddr string
+}
+
+// Init does nothing.
+func (httpAPI *HTTPAPIService) Init() error {
+	return nil
+}
+
+// Run starts the API.
+func (httpAPI *HTTPAPIService) Run() error {
+	log.Println("running HTTP API service")
 
 	// create APIs
 	legacyAPI, err := api.ComposeAPI(api.HTTPClientSettings{
-		URI: config.LegacyNode.URI,
+		URI: httpAPI.cfg.LegacyNode.URI,
 		Client: &http.Client{
-			Timeout: config.LegacyNode.Timeout,
+			Timeout: httpAPI.cfg.LegacyNode.Timeout,
 		},
 	})
 	if err != nil {
 		return fmt.Errorf("unable to build legacy API: %w", err)
 	}
 
-	c2API := iotago.NewNodeAPIClient(config.C2Node.URI,
-		iotago.WithNodeAPIClientHTTPClient(&http.Client{Timeout: config.C2Node.Timeout}),
+	c2API := iotago.NewNodeAPIClient(httpAPI.cfg.C2Node.URI,
+		iotago.WithNodeAPIClientHTTPClient(&http.Client{Timeout: httpAPI.cfg.C2Node.Timeout}),
 	)
 
-	e.GET("/state", func(c echo.Context) error {
+	httpAPI.e.GET("/state", func(c echo.Context) error {
 
 		state := &StateResponse{}
 
@@ -84,14 +100,14 @@ func Start(config *Config) error {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to query node info from legacy node: %w", err))
 		}
 
-		ledgerQueryRes, err := common.QueryLedgerState(config.LegacyNode.URI, int(legacyNodeInfo.LatestSolidSubtangleMilestoneIndex))
+		ledgerQueryRes, err := common.QueryLedgerState(httpAPI.cfg.LegacyNode.URI, int(legacyNodeInfo.LatestSolidSubtangleMilestoneIndex))
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to query ledger state from legacy node for milestone %d: %w", legacyNodeInfo.LatestSolidSubtangleMilestoneIndex, err))
 		}
 
 		var totalLocked uint64
 		for addr, balance := range ledgerQueryRes.Balances {
-			if balance < uint64(config.MinTokenAmountForMigration) {
+			if balance < uint64(httpAPI.cfg.MinTokenAmountForMigration) {
 				continue
 			}
 
@@ -108,7 +124,7 @@ func Start(config *Config) error {
 		return c.JSON(http.StatusOK, state)
 	})
 
-	e.GET("/recentlyLocked/:numEntries", func(c echo.Context) error {
+	httpAPI.e.GET("/recentlyLocked/:numEntries", func(c echo.Context) error {
 		numEntriesWanted, err := strconv.Atoi(c.Param("numEntries"))
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unable to parse numEntries parameter: %w", err))
@@ -120,7 +136,7 @@ func Start(config *Config) error {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unable to parse numEntries parameter: %w", err))
 		}
 
-		target := nodeInfo.LatestSolidSubtangleMilestoneIndex - int64(config.MaxMilestonesToQueryForEntries)
+		target := nodeInfo.LatestSolidSubtangleMilestoneIndex - int64(httpAPI.cfg.MaxMilestonesToQueryForEntries)
 		switch {
 		case target < 0:
 			target = 0
@@ -131,7 +147,7 @@ func Start(config *Config) error {
 
 	out:
 		for msIndex := nodeInfo.LatestSolidSubtangleMilestoneIndex; msIndex > target; msIndex-- {
-			res, err := common.QueryLedgerDiffExtended(config.LegacyNode.URI, int(msIndex))
+			res, err := common.QueryLedgerDiffExtended(httpAPI.cfg.LegacyNode.URI, int(msIndex))
 			if err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to extended ledger diff for milestone %d: %w", msIndex, err))
 			}
@@ -161,7 +177,7 @@ func Start(config *Config) error {
 		return c.JSON(http.StatusOK, funds)
 	})
 
-	e.GET("/recentlyMigrated/:numReceipts", func(c echo.Context) error {
+	httpAPI.e.GET("/recentlyMigrated/:numReceipts", func(c echo.Context) error {
 		receipts, err := c2API.Receipts()
 		if err != nil {
 			return fmt.Errorf("unable to retrieve receipts from C2 node: %w", err)
@@ -204,18 +220,20 @@ func Start(config *Config) error {
 		return c.JSON(http.StatusOK, recentReceipts)
 	})
 
-	if err := e.Start(config.ListenAddress); err != nil {
+	if err := httpAPI.e.Start(httpAPI.listenAddr); err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
 		return err
 	}
 
 	return nil
 }
 
-// Shutdown shuts down the API.
-func Shutdown() error {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancelFunc()
-	if err := e.Shutdown(ctx); err != nil {
+// Shutdown shuts down the service.
+func (httpAPI *HTTPAPIService) Shutdown(ctx context.Context) error {
+	log.Println("shutting down HTTP API service...")
+	if err := httpAPI.e.Shutdown(ctx); err != nil {
 		return err
 	}
 	return nil
