@@ -98,6 +98,39 @@ func QueryLedgerDiffExtended(legacyNodeURI string, milestoneIndex int) (*GetLedg
 	return &resObj, nil
 }
 
+type (
+	// GetWhiteFlagConfirmationResponse defines the response of a getWhiteFlagConfirmation HTTP API call.
+	GetWhiteFlagConfirmationResponse struct {
+		// The trytes of the milestone bundle.
+		MilestoneBundle []trinary.Trytes `json:"milestoneBundle"`
+		// The included bundles of the white-flag confirmation in their DFS order.
+		IncludedBundles [][]trinary.Trytes `json:"includedBundles"`
+	}
+)
+
+// QueryWhiteFlagConfirmation queries for the white-flag confirmation of given milestone.
+func QueryWhiteFlagConfirmation(legacyNodeURI string, milestoneIndex int) (*GetWhiteFlagConfirmationResponse, error) {
+	req := buildLegacyRequest(legacyNodeURI, fmt.Sprintf(`{"command": "getWhiteFlagConfirmation", "milestoneIndex": %d}`, milestoneIndex))
+	http.DefaultClient.Timeout = 0
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("unable to query white-flag confirmation: %w", err)
+	}
+	defer res.Body.Close()
+
+	var resObj GetWhiteFlagConfirmationResponse
+	jsonRes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read response body from white-flag confirmation response: %w", err)
+	}
+
+	if err := json.Unmarshal(jsonRes, &resObj); err != nil {
+		return nil, fmt.Errorf("unable to JSON unmarshal white-flag confirmation response: %w", err)
+	}
+
+	return &resObj, nil
+}
+
 // builds up a legacy node API request
 func buildLegacyRequest(legacyNodeURI string, body string) *http.Request {
 	return &http.Request{

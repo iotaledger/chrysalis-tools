@@ -1,13 +1,37 @@
 {
-  "listenAddress": "0.0.0.0:8484",
-  "minTokenAmountForMigration": 1000000,
-  "maxMilestonesToQueryForEntries": 20,
-  "legacyNode": {
-    "uri": "http://localhost:14265",
-    "timeout": "10s"
+  "sharedListenAddress": "0.0.0.0:8484",
+  "shutdownMaxAwait": "10s",
+  "httpAPIService": {
+    "minTokenAmountForMigration": 1000000,
+    "maxMilestonesToQueryForEntries": 20,
+    "legacyNode": {
+      "uri": "http://localhost:14265",
+      "timeout": "10s"
+    },
+    "c2Node": {
+      "uri": "http://localhost:14266",
+      "timeout": "10s"
+    }
   },
-  "c2Node": {
-    "uri": "http://localhost:14266",
-    "timeout": "10s"
+  "promMetricsService": {
+    "enabled": true,
+    "debug": true,
+    "legacyMilestoneStartIndex": 0,
+    "c2MilestoneStartIndex": 0,
+    "stateFilePath": "prom_metrics_service.state",
+    "fetchInterval": "10s",
+    "counterNames": {
+      "serviceErrors": "iota_prom_metrics_service_errors",
+      "includedLegacyTails": "iota_wf_tails_included",
+      "appliedReceiptEntries": "iota_receipts_entries_applied"
+    },
+    "legacyNode": {
+      "uri": "http://localhost:14265",
+      "timeout": "10s"
+    },
+    "c2Node": {
+      "uri": "http://localhost:14266",
+      "timeout": "10s"
+    }
   }
 }
