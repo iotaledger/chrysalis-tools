@@ -16,7 +16,7 @@
   "promMetricsService": {
     "enabled": true,
     "debug": true,
-    "legacyMilestoneStartIndex": 0,
+    "legacyMilestoneStartIndex": 1000,
     "c2MilestoneStartIndex": 0,
     "stateFilePath": "prom_metrics_service.state",
     "fetchInterval": "10s",

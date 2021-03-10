@@ -188,7 +188,7 @@ func (pms *PromMetricsService) update() error {
 		return err
 	}
 
-	pms.state.LastC2MilestoneIndexQueried = legacyMsTargetIndex
+	pms.state.LastLegacyMilestoneIndexQueried = legacyMsTargetIndex
 	pms.state.LastC2MilestoneIndexQueried = c2MsTargetIndex
 	pms.state.ReceiptEntriesApplied += receiptEntriesApplied
 	pms.state.LegacyTailsIncluded += tailsIncluded
