@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/consts"
+	"github.com/iotaledger/iota.go/encoding/b1t6"
 	"github.com/iotaledger/iota.go/v2"
 	"github.com/labstack/echo/v4"
 )
@@ -89,7 +90,7 @@ func (httpAPI *HTTPAPIService) Run() error {
 
 		treasuryRes, err := c2API.Treasury()
 		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to query treasury: %w", err))
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to query treasury: %v", err))
 		}
 
 		state.TreasuryTokens = treasuryRes.Amount
@@ -97,12 +98,12 @@ func (httpAPI *HTTPAPIService) Run() error {
 
 		legacyNodeInfo, err := legacyAPI.GetNodeInfo()
 		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to query node info from legacy node: %w", err))
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to query node info from legacy node: %v", err))
 		}
 
 		ledgerQueryRes, err := common.QueryLedgerState(httpAPI.cfg.LegacyNode.URI, int(legacyNodeInfo.LatestSolidSubtangleMilestoneIndex))
 		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to query ledger state from legacy node for milestone %d: %w", legacyNodeInfo.LatestSolidSubtangleMilestoneIndex, err))
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to query ledger state from legacy node for milestone %d: %v", legacyNodeInfo.LatestSolidSubtangleMilestoneIndex, err))
 		}
 
 		var totalLocked uint64
@@ -124,16 +125,38 @@ func (httpAPI *HTTPAPIService) Run() error {
 		return c.JSON(http.StatusOK, state)
 	})
 
+	httpAPI.e.GET("/receipts/integrity", func(c echo.Context) error {
+		receipts, err := c2API.Receipts()
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to retrieve receipts from C2 node: %v", err))
+		}
+
+		seenTailTx := make(map[string]struct{})
+		for _, receipt := range receipts {
+			for _, seri := range receipt.Receipt.Funds {
+				entry := seri.(*iotago.MigratedFundsEntry)
+				if _, seen := seenTailTx[string(entry.TailTransactionHash[:])]; seen {
+					tailTxTrytes := b1t6.EncodeToTrytes(entry.TailTransactionHash[:])
+					tailTxHex := hex.EncodeToString(entry.TailTransactionHash[:])
+					return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("tail tx %s / %s was migrated multiple times", tailTxTrytes, tailTxHex))
+				}
+				seenTailTx[string(entry.TailTransactionHash[:])] = struct{}{}
+			}
+		}
+
+		return c.String(http.StatusOK, "integrity ok")
+	})
+
 	httpAPI.e.GET("/recentlyLocked/:numEntries", func(c echo.Context) error {
 		numEntriesWanted, err := strconv.Atoi(c.Param("numEntries"))
 		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unable to parse numEntries parameter: %w", err))
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to parse numEntries parameter: %v", err))
 		}
 
 		// use the latest solid milestone as a base and then go back a max amount of milestones to collect entries
 		nodeInfo, err := legacyAPI.GetNodeInfo()
 		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unable to parse numEntries parameter: %w", err))
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to parse numEntries parameter: %v", err))
 		}
 
 		target := nodeInfo.LatestSolidSubtangleMilestoneIndex - int64(httpAPI.cfg.MaxMilestonesToQueryForEntries)
@@ -149,7 +172,7 @@ func (httpAPI *HTTPAPIService) Run() error {
 		for msIndex := nodeInfo.LatestSolidSubtangleMilestoneIndex; msIndex > target; msIndex-- {
 			res, err := common.QueryLedgerDiffExtended(httpAPI.cfg.LegacyNode.URI, int(msIndex))
 			if err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("unable to extended ledger diff for milestone %d: %w", msIndex, err))
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to extended ledger diff for milestone %d: %v", msIndex, err))
 			}
 
 			for _, tx := range res.ConfirmedTxWithValue {
@@ -180,12 +203,12 @@ func (httpAPI *HTTPAPIService) Run() error {
 	httpAPI.e.GET("/recentlyMigrated/:numReceipts", func(c echo.Context) error {
 		receipts, err := c2API.Receipts()
 		if err != nil {
-			return fmt.Errorf("unable to retrieve receipts from C2 node: %w", err)
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to retrieve receipts from C2 node: %v", err))
 		}
 
 		numReceiptsWanted, err := strconv.Atoi(c.Param("numReceipts"))
 		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Errorf("unable to parse numReceipts parameter: %w", err))
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to parse numReceipts parameter: %v", err))
 		}
 
 		recentReceipts := make([]*RecentReceipt, numReceiptsWanted)

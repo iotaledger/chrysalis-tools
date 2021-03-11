@@ -25,6 +25,7 @@ func main() {
 	log.Printf("booting up server with following config: %s", cfg.JSONString())
 
 	e := echo.New()
+	e.Debug = true
 	e.HideBanner = true
 
 	var services []service

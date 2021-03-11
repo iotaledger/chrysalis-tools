@@ -194,6 +194,8 @@ github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7 h1:DI
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go/v2 v2.0.0-20210301150403-555f6dae0fe0 h1:tniwjetmqmmUelWWmszq0Fr68GMpXVaOQdY3365pppk=
 github.com/iotaledger/iota.go/v2 v2.0.0-20210301150403-555f6dae0fe0/go.mod h1:W6ma7/TCwGO9s3+OX9c0AES4vc4/3PhoDuROXFUBqRE=
+github.com/iotaledger/iota.go/v2 v2.0.0-20210309092402-a4a03ab62bd2 h1:MRwfPn1o2ZAbQxlc+6xvW+ayXAKUXw3GXJwT7b6pUJI=
+github.com/iotaledger/iota.go/v2 v2.0.0-20210309092402-a4a03ab62bd2/go.mod h1:W6ma7/TCwGO9s3+OX9c0AES4vc4/3PhoDuROXFUBqRE=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=

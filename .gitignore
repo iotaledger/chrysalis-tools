@@ -6,6 +6,7 @@
 *.dylib
 *.csv
 *.bin
+*.state
 
 # Test binary, built with `go test -c`
 *.test
