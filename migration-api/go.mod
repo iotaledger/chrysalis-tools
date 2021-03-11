@@ -2,8 +2,6 @@ module github.com/iotaledger/chrysalis-tools/migration-api
 
 go 1.16
 
-replace github.com/iotaledger/chrysalis-tools/common => ../common
-
 require (
 	github.com/iotaledger/chrysalis-tools/common v0.0.0-20210310095909-b38c905df767
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7
