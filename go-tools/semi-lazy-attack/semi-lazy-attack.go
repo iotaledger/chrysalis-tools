@@ -23,7 +23,7 @@ func main() {
 	Must(err)
 
 	fmt.Println("Listening..")
-	client := SetUpMqTT("http://chrysalis-net.twilightparadox.com", 1883, nil, nil, nil)
+	client := SetUpMqTT("http://localhost", 1883, nil, nil, nil)
 	sub(client)
 	select {}
 }
