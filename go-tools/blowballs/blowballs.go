@@ -8,15 +8,14 @@ import (
 	iota "github.com/iotaledger/iota.go/v2"
 )
 
-const blowballSize = 10
-
 func main() {
-	endpoint := flag.String("endpoint", "http://chrysalis-net.twilightparadox.com:14266", "endpoint")
-	nodeAPI := iota.NewNodeAPIClient(*endpoint)
+	nodeDomain, apiPort := DefineNodeFlags()
+	blowballSize := flag.Int("blowball", 10, "size of a single blowball")
+	flag.Parse()
+
+	nodeAPI, nodeInfo := ObtainAPI(*nodeDomain, *apiPort)
 
 	for {
-		nodeInfo, err := nodeAPI.Info()
-		Must(err)
 		milestoneResponse, err := nodeAPI.MilestoneByIndex(nodeInfo.LatestMilestoneIndex)
 		Must(err)
 		messageIdBytes, err := hex.DecodeString(milestoneResponse.MessageID)
@@ -24,7 +23,7 @@ func main() {
 		var parent iota.MessageID
 		copy(parent[:], messageIdBytes)
 		parents := []iota.MessageID{parent}
-		for i := 0; i < blowballSize; i++ {
+		for i := 0; i < *blowballSize; i++ {
 			m := SendDataMessage(nodeAPI, &nodeInfo.NetworkID, &parents, "blowball", string(i))
 			id, err := m.ID()
 			Must(err)
