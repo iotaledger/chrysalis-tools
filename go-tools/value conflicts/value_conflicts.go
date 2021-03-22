@@ -2,21 +2,15 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	. "github.com/iotaledger/chrysalis-tools/go-tests/lib"
 	iota "github.com/iotaledger/iota.go/v2"
 )
 
-const (
-	nodeUrl = LocalHost
-	apiPort = ApiPort
-)
-
 func main() {
-	endpoint := flag.String("endpoint", fmt.Sprintf("http://%s:%d", nodeUrl, apiPort), "endpoint")
-	nodeAPI := iota.NewNodeAPIClient(*endpoint)
-	info, err := nodeAPI.Info()
-	Must(err)
+	nodeDomain, apiPort := DefineNodeFlags()
+	flag.Parse()
+
+	nodeAPI, nodeInfo := ObtainAPI(*nodeDomain, *apiPort)
 
 	genesisAddress := iota.Ed25519Address{}
 	genesisOutput := [iota.TransactionIDLength]byte{}
@@ -30,18 +24,19 @@ func main() {
 
 	tx, err := iota.NewTransactionBuilder().
 		AddInput(CreateInput(&genesisAddress, genesisOutput, 0)).
-		AddOutput(CreateOutput(&address1, 825)).
+		AddOutput(CreateOutput(&address1, 1_500_000)).
 		AddIndexationPayload(&iota.Indexation{Index: []byte("value"), Data: []byte("test")}).
 		Build(signer)
 	Must(err)
 
-	SendValueMessage(nodeAPI, &info.NetworkID, nil, tx)
+	SendValueMessage(nodeAPI, &nodeInfo.NetworkID, nil, tx)
 
 	tx, err = iota.NewTransactionBuilder().
 		AddInput(CreateInput(&genesisAddress, genesisOutput, 0)).
-		AddOutput(CreateOutput(&address1, 825)).
+			AddOutput(CreateOutput(&address1, 1_800_000)).
 		AddIndexationPayload(&iota.Indexation{Index: []byte("value"), Data: []byte("test")}).
 		Build(signer)
 	Must(err)
 
+	SendValueMessage(nodeAPI, &nodeInfo.NetworkID, nil, tx)
 }
