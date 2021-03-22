@@ -1,48 +1,68 @@
 package main
 
 import (
+	"encoding/hex"
+	"flag"
 	. "github.com/iotaledger/chrysalis-tools/go-tests/lib"
 	iota "github.com/iotaledger/iota.go/v2"
 	ed "github.com/iotaledger/iota.go/v2/ed25519"
+	"log"
 	"time"
 )
 
-const (
-	nodeUrl = LocalHost
-	apiPort = ApiPort
-)
-
 func main() {
-	nodeAPI, info := ObtainAPI(nodeUrl, apiPort)
+	nodeDomain, apiPort := DefineNodeFlags()
+	flag.Parse()
 
-	//TODO specify correct genesis address and output
-	genesisAddress := iota.Ed25519Address{}
-	genesisOutput := [iota.TransactionIDLength]byte{}
+	nodeAPI, nodeInfo := ObtainAPI(*nodeDomain, *apiPort)
+	nullOutput := [iota.TransactionIDLength]byte{}
 
-	seed := CreateSeed([]byte{0xde, 0xad, 0xbe, 0xef})
-	privateKey, _, address1 := GenerateAddressFromSeed(seed)
+	inputSeed := CreateSeed([]byte{0xde, 0xad, 0xbe, 0xef})
+	privateKey, _, address1 := GenerateAddressFromSeed(inputSeed)
+	log.Println("input ed_address 1 is ", hex.EncodeToString(address1[:]))
+	log.Println("input bech 32_1 address is ", address1.Bech32(1))
 	signer := iota.NewInMemoryAddressSigner(iota.AddressKeys{
 		Address: &address1,
-		Keys:    &privateKey,
+		Keys:    privateKey,
 	})
 
+	outputSeed2 := CreateSeed([]byte{0xde, 0xad, 0xbe, 0xe1})
+	_, _, address2 := GenerateAddressFromSeed(outputSeed2)
+	log.Println("input ed_address 2 is ", hex.EncodeToString(address2[:]))
+	log.Println("input bech 32_2 address is ", address2.Bech32(1))
+
+	outputSeed3 := CreateSeed([]byte{0xae, 0xad, 0xbe, 0xe1})
+	_, _, address3 := GenerateAddressFromSeed(outputSeed3)
+	log.Println("input ed_address 3 is ", hex.EncodeToString(address3[:]))
+	log.Println("input bech 32_3 address is ", address3.Bech32(1))
 	tx, err := iota.NewTransactionBuilder().
-		AddInput(CreateInput(&genesisAddress, genesisOutput, 0)).
-		AddOutput(CreateOutput(&address1, 825)).
+		AddInput(CreateInput(&address1, nullOutput, 0)).
+		AddOutput(CreateOutput(&address2, 1000005000000061-10_000_000)).
+		AddOutput(CreateOutput(&address3, 10_000_000)).
 		AddIndexationPayload(&iota.Indexation{Index: []byte("value"), Data: []byte("test")}).
 		Build(signer)
 	Must(err)
 
-	message1 := SendValueMessage(nodeAPI, &info.NetworkID, &iota.MessageIDs{iota.MessageID{}}, tx)
+	milestoneResponse, err := nodeAPI.MilestoneByIndex(nodeInfo.LatestMilestoneIndex)
+	Must(err)
 
-	tx, err = iota.NewTransactionBuilder().
-		AddInput(CreateInput(&genesisAddress, genesisOutput, 0)).
-		AddOutput(CreateOutput(&address1, 700)).
+	parentBytes, err := hex.DecodeString(milestoneResponse.MessageID)
+	Must(err)
+
+	var parent iota.MessageID
+	copy(parent[:], parentBytes)
+
+	message1 := SendValueMessage(nodeAPI, &nodeInfo.NetworkID, &iota.MessageIDs{parent}, tx)
+
+	tx2, err := iota.NewTransactionBuilder().
+		AddInput(CreateInput(&address1, nullOutput, 0)).
+		AddOutput(CreateOutput(&address2, 1000005000000061-20_000_000)).
+		AddOutput(CreateOutput(&address3, 20_000_000)).
 		AddIndexationPayload(&iota.Indexation{Index: []byte("value"), Data: []byte("test")}).
 		Build(signer)
 	Must(err)
 
-	message2 := SendValueMessage(nodeAPI, &info.NetworkID, &iota.MessageIDs{iota.MessageID{}}, tx)
+	message2 := SendValueMessage(nodeAPI, &nodeInfo.NetworkID, &iota.MessageIDs{parent}, tx2)
 
 	//**** Set Up Milestone ****/
 
@@ -52,18 +72,21 @@ func main() {
 
 	id, err := message2.ID()
 	Must(err)
-	sendMilestone(id, milestonePublicKey, keyMap, nodeAPI, info)
+	log.Print("message2 id is ", hex.EncodeToString((*id)[:]))
+	sendMilestone(id, milestonePublicKey, keyMap, nodeAPI, nodeInfo, nodeInfo.LatestMilestoneIndex+2)
 
-	id, err = message1.ID()
+	id2, err := message1.ID()
 	Must(err)
-	sendMilestone(id, milestonePublicKey, keyMap, nodeAPI, info)
+	log.Print("message1 id is ", hex.EncodeToString((*id2)[:]))
+	sendMilestone(id2, milestonePublicKey, keyMap, nodeAPI, nodeInfo, nodeInfo.LatestMilestoneIndex+1)
 
 }
 
-func sendMilestone(id *iota.MessageID, milestonePublicKey iota.MilestonePublicKey, keyMap iota.MilestonePublicKeyMapping, nodeAPI *iota.NodeAPIClient, info *iota.NodeInfoResponse) {
-	parents := iota.MessageIDs{*id}
+func sendMilestone(parent *iota.MessageID, milestonePublicKey iota.MilestonePublicKey, keyMap iota.MilestonePublicKeyMapping, nodeAPI *iota.NodeAPIClient, info *iota.NodeInfoResponse, index uint32) {
+	parents := iota.MessageIDs{*parent}
 	proof := CreateMilestoneInclusionMerkleProof(parents)
-	milestone := CreateSignedMilestone(2, uint64(time.Now().Unix()), parents, proof, []iota.MilestonePublicKey{milestonePublicKey},
+	log.Print("The merkle root is ", hex.EncodeToString(proof[:]))
+	milestone := CreateSignedMilestone(index, uint64(time.Now().Unix()), parents, proof, []iota.MilestonePublicKey{milestonePublicKey},
 		nil, keyMap)
 	SendMilestone(nodeAPI, &info.NetworkID, parents, milestone)
 }
