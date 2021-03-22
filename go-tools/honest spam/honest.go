@@ -30,8 +30,6 @@ func main() {
 	info, err := nodeAPI.Info()
 	Must(err)
 
-	Must(err)
-
 	var i uint32 = 0
 	for {
 		i++
