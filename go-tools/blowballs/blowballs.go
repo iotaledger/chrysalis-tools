@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/hex"
 	"flag"
-	"fmt"
 	. "github.com/iotaledger/chrysalis-tools/go-tests/lib"
 	iota "github.com/iotaledger/iota.go/v2"
+	"log"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 			m := SendDataMessage(nodeAPI, &nodeInfo.NetworkID, &parents, "blowball", string(i))
 			id, err := m.ID()
 			Must(err)
-			fmt.Println("sent blowball message ", hex.EncodeToString(id[:]))
+			log.Println("sent blowball message ", hex.EncodeToString(id[:]))
 		}
 
 	}
