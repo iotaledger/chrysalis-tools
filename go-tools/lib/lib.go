@@ -15,20 +15,22 @@ const (
 	LocalHost = "127.0.0.1"
 )
 
-var (
-	BalanceSeed   = []byte{0xde, 0xad, 0xbe, 0xef}
-	NullMessageId = MessageID{}
-)
-
 func Must(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
+func DefineNodeFlags() (*string, *int) {
+	nodeDomain := flag.String("node", LocalHost, "Can be either domain name or ip of the node")
+	blowballSize :=flag.Int("port", ApiPort, "Api port")
+
+	return nodeDomain, blowballSize
+}
+
 func ObtainAPI(nodeUrl string, apiPort int) (*NodeAPIClient, *NodeInfoResponse) {
-	endpoint := flag.String("endpoint", fmt.Sprintf("http://%s:%d", nodeUrl, apiPort), "endpoint")
-	nodeAPI := NewNodeAPIClient(*endpoint)
+	endpoint := fmt.Sprintf("http://%s:%d", nodeUrl, apiPort)
+	nodeAPI := NewNodeAPIClient(endpoint)
 	info, err := nodeAPI.Info()
 	Must(err)
 	return nodeAPI, info
