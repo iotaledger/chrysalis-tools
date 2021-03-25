@@ -61,16 +61,14 @@ func CreateMilestoneInclusionMerkleProof(msgIds MessageIDs) MilestoneInclusionMe
 	hasher := NewHasher(crypto.BLAKE2b_256)
 	marshalers := make([]encoding.BinaryMarshaler, len(msgIds))
 	for i, msgId := range msgIds {
-		var marshId MarshableID
+		var marshId = make(MarshableID, 32)
 		copy(marshId, msgId[:])
 		marshalers[i] = marshId
 	}
 	hash, err := hasher.Hash(marshalers)
 	Must(err)
 	proof := MilestoneInclusionMerkleProof{}
-	for i, b := range hash {
-		proof[i] = b
-	}
+	copy(proof[:], hash)
 	return proof
 }
 
