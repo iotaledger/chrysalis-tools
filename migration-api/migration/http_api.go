@@ -200,7 +200,7 @@ func (httpAPI *HTTPAPIService) Run() error {
 		return c.JSON(http.StatusOK, funds)
 	})
 
-	httpAPI.e.GET("/recentlyMigrated/:numReceipts", func(c echo.Context) error {
+	httpAPI.e.GET("/recentlyMinted/:numReceipts", func(c echo.Context) error {
 		receipts, err := c2API.Receipts()
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to retrieve receipts from C2 node: %v", err))
@@ -209,6 +209,10 @@ func (httpAPI *HTTPAPIService) Run() error {
 		numReceiptsWanted, err := strconv.Atoi(c.Param("numReceipts"))
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to parse numReceipts parameter: %v", err))
+		}
+
+		if len(receipts) == 0 {
+			return c.JSON(http.StatusOK, make([]*RecentReceipt, 0))
 		}
 
 		recentReceipts := make([]*RecentReceipt, numReceiptsWanted)
