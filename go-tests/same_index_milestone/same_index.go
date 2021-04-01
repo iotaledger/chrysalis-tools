@@ -88,5 +88,8 @@ func sendMilestone(parent *iota.MessageID, milestonePublicKey iota.MilestonePubl
 	log.Print("The merkle root is ", hex.EncodeToString(proof[:]))
 	milestone := CreateSignedMilestone(index, uint64(time.Now().Unix()), parents, proof, []iota.MilestonePublicKey{milestonePublicKey},
 		nil, keyMap)
-	SendMilestone(nodeAPI, &info.NetworkID, parents, milestone)
+	message := SendMilestone(nodeAPI, &info.NetworkID, parents, milestone)
+	id, err := message.ID()
+	Must(err)
+	log.Print("sent milestone ", hex.EncodeToString(id[:]))
 }
