@@ -19,6 +19,8 @@ import (
 	"github.com/iotaledger/iota.go/pow"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 var (
@@ -29,10 +31,8 @@ var (
 	migrateTo              = flag.Int("migration-to", 1000, "end index of the migrations")
 	migrationSourceFile    = flag.String("migration-source-file", "seedmap.csv", "the seed map file containing the data for the migrations")
 	migrationInfoFile      = flag.String("migration-info-file", "migrated.csv", "the name of the file which holds info about which migration bundles were generated")
-	seedMapToCSVSourceFile = flag.String("to-csv-source-file", "seedmap.txt", "the source file to convert")
-	seedMapToCSVTargetFile = flag.String("to-csv-target-file", "seedmap.csv", "the target file to produce")
-	gsAddrsToGenerate      = flag.Int("gs-addrs-count", 100000, "the amount of genesis addresses to generate")
-	gsSeedMapFileName      = flag.String("gs-seed-map-file", "seedmap.txt", "the file to which to write the seed map to")
+	gsAddrsToGenerateCount = flag.Int("gs-addrs-count", 100000, "the amount of genesis addresses to generate")
+	gsSeedMapFileName      = flag.String("gs-seed-map-file", "seedmap.csv", "the file to which to write the seed map to")
 	gsSnapshotFileName     = flag.String("gs-snapshot-file-file", "snapshot.csv", "the file to which to write the global snapshot data to")
 )
 
@@ -41,7 +41,6 @@ type Mode string
 const (
 	ModeSpam                            Mode = "spam"
 	ModeMigrateSeedMap                  Mode = "migrate"
-	ModeConvertSeedMapToCSV             Mode = "convertSeedMapToCSV"
 	ModeGenerateGlobalSnapshotAddresses Mode = "generateGSAddresses"
 )
 
@@ -68,12 +67,10 @@ func main() {
 		spamLegacy(legacyAPI)
 	case ModeMigrateSeedMap:
 		migrateSeedMap(legacyAPI, *migrationSourceFile, *migrationInfoFile, *migrateBatchSize, *migrateFrom, *migrateTo)
-	case ModeConvertSeedMapToCSV:
-		seedMapToCsv(*seedMapToCSVSourceFile, *seedMapToCSVTargetFile)
 	case ModeGenerateGlobalSnapshotAddresses:
-		generateGSAddresses(*gsAddrsToGenerate, *gsSeedMapFileName, *gsSnapshotFileName)
+		generateGSAddresses(*gsAddrsToGenerateCount, *gsSeedMapFileName, *gsSnapshotFileName)
 	default:
-		fmt.Println("invalid program mode, supported are:", ModeMigrateSeedMap, ModeSpam, ModeConvertSeedMapToCSV, ModeGenerateGlobalSnapshotAddresses)
+		fmt.Println("invalid program mode, supported are:", ModeMigrateSeedMap, ModeSpam, ModeGenerateGlobalSnapshotAddresses)
 	}
 }
 
@@ -132,9 +129,9 @@ func migrateSeedMap(legacyAPI *api.API, srcFileName string, infoFileName string,
 	must(err)
 	defer seedMapFileCSV.Close()
 
-	legacyMigrated, err := os.OpenFile(infoFileName, os.O_CREATE|os.O_TRUNC|os.O_RDWR, os.ModePerm)
+	migrationInfoFile, err := os.OpenFile(infoFileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, os.ModePerm)
 	must(err)
-	defer legacyMigrated.Close()
+	defer migrationInfoFile.Close()
 
 	exit := make(chan struct{})
 	defer close(exit)
@@ -151,7 +148,8 @@ func migrateSeedMap(legacyAPI *api.API, srcFileName string, infoFileName string,
 	var currentBatch [][]trinary.Trytes
 	for i := 0; i < to; i++ {
 		var seed, firstAddr string
-		if _, err := fmt.Fscanln(seedMapFileCSV, &seed, &firstAddr); err == io.EOF {
+		var funds uint64
+		if _, err := fmt.Fscanln(seedMapFileCSV, &seed, &firstAddr, &funds); err == io.EOF {
 			break
 		}
 
@@ -161,10 +159,10 @@ func migrateSeedMap(legacyAPI *api.API, srcFileName string, infoFileName string,
 
 		fmt.Printf("%d to %d (%d)\t\r", from, to, i+1)
 
-		tailTxHash, ed25519Hex, bndl, err := migrate(legacyAPI, seed, 27795302832, tipsChan)
+		tailTxHash, ed25519PrvKey, addrHex, bndl, err := migrate(legacyAPI, seed, funds, tipsChan)
 		must(err)
 
-		if _, err := fmt.Fprintln(legacyMigrated, tailTxHash, ed25519Hex); err != nil {
+		if _, err := fmt.Fprintln(migrationInfoFile, tailTxHash, hex.EncodeToString(ed25519PrvKey), addrHex, funds); err != nil {
 			must(err)
 		}
 
@@ -240,31 +238,28 @@ func generateGSAddresses(count int, seedMapFileName string, snapshotFileName str
 		count++
 	}
 
-	var sbSnapshot, sbSeedMap strings.Builder
-	seedMapfile, err := os.OpenFile("seedmap.txt", os.O_TRUNC|os.O_CREATE|os.O_RDWR, os.ModePerm)
+	seedMapfile, err := os.OpenFile(seedMapFileName, os.O_TRUNC|os.O_CREATE|os.O_RDWR, os.ModePerm)
 	must(err)
 	defer seedMapfile.Close()
 
-	snapshotFile, err := os.OpenFile("snapshot.csv", os.O_TRUNC|os.O_CREATE|os.O_RDWR, os.ModePerm)
+	snapshotFile, err := os.OpenFile(snapshotFileName, os.O_TRUNC|os.O_CREATE|os.O_RDWR, os.ModePerm)
 	must(err)
 	defer snapshotFile.Close()
 
 	for i := 0; i < count; i++ {
-		seed, addr := seedAndFirstAddr()
-		_, err := seedMapfile.WriteString(fmt.Sprintf("%s --> %s\n", seed, addr))
-		must(err)
 
 		dep := fundsPerAddr
 		if remainder != 0 && i+1 == count {
 			dep = remainder
 		}
 
+		seed, addr := seedAndFirstAddr()
+		_, err := fmt.Fprintln(seedMapfile, seed, addr, dep)
+		must(err)
+
 		_, err = snapshotFile.WriteString(fmt.Sprintf("%s;%d\n", addr, dep))
 		must(err)
 	}
-
-	fmt.Print(sbSeedMap.String())
-	fmt.Print(sbSnapshot.String())
 }
 
 func seedAndFirstAddr() (string, string) {
@@ -289,20 +284,21 @@ func randSeed() string {
 	return seed
 }
 
-func migrate(legacyAPI *api.API, seed string, val uint64, tipsChan <-chan *api.TransactionsToApprove) (string, string, []trinary.Trytes, error) {
+func migrate(legacyAPI *api.API, seed string, val uint64, tipsChan <-chan *api.TransactionsToApprove) (string, ed25519.PrivateKey, string, []trinary.Trytes, error) {
 	legacyAddr, err := address.GenerateAddress(seed, 0, consts.SecurityLevelMedium, true)
 	if err != nil {
-		return "", "", nil, err
+		return "", nil, "", nil, err
 	}
 
-	var ed25519Addr [32]byte
-	if _, err = rand.Read(ed25519Addr[:]); err != nil {
-		return "", "", nil, err
+	pubKey, prvKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		return "", nil, "", nil, err
 	}
 
+	ed25519Addr := iotago.AddressFromEd25519PubKey(pubKey)
 	migAddr, err := address.GenerateMigrationAddress(ed25519Addr, true)
 	if err != nil {
-		return "", "", nil, err
+		return "", nil, "", nil, err
 	}
 
 	prepBundle, err := legacyAPI.PrepareTransfers(seed, bundle.Transfers{
@@ -318,20 +314,20 @@ func migrate(legacyAPI *api.API, seed string, val uint64, tipsChan <-chan *api.T
 		},
 	})
 	if err != nil {
-		return "", "", nil, err
+		return "", nil, "", nil, err
 	}
 
 	tips := <-tipsChan
 
 	readyBundle, err := legacyAPI.AttachToTangle(tips.TrunkTransaction, tips.BranchTransaction, 1, prepBundle)
 	if err != nil {
-		return "", "", nil, err
+		return "", nil, "", nil, err
 	}
 
 	tailTx, err := transaction.AsTransactionObject(readyBundle[0])
 	if err != nil {
-		return "", "", nil, err
+		return "", nil, "", nil, err
 	}
 
-	return tailTx.Hash, hex.EncodeToString(ed25519Addr[:]), readyBundle, nil
+	return tailTx.Hash, prvKey, hex.EncodeToString(ed25519Addr[:]), readyBundle, nil
 }
