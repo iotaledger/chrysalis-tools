@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"flag"
+	iota "github.com/GalRogozinski/iota.go/v2"
+	"github.com/GalRogozinski/iota.go/v2/bech32"
 	. "github.com/iotaledger/chrysalis-tools/go-tests/lib"
-	iota "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/bech32"
 	"log"
 )
 

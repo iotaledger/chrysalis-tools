@@ -1,12 +1,11 @@
 package lib
 
 import (
-	"encoding/hex"
 	"flag"
 	"fmt"
+	. "github.com/GalRogozinski/iota.go/v2"
+	ed "github.com/GalRogozinski/iota.go/v2/ed25519"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	. "github.com/iotaledger/iota.go/v2"
-	ed "github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 const (
@@ -32,9 +31,9 @@ func DefineNodeFlags() (*string, *int) {
 	return nodeDomain, blowballSize
 }
 
-func ObtainAPI(nodeUrl string, apiPort int) (*NodeAPIClient, *NodeInfoResponse) {
+func ObtainAPI(nodeUrl string, apiPort int) (*NodeHTTPAPIClient, *NodeInfoResponse) {
 	endpoint := fmt.Sprintf("http://%s:%d", nodeUrl, apiPort)
-	nodeAPI := NewNodeAPIClient(endpoint)
+	nodeAPI := NewNodeHTTPAPIClient(endpoint)
 	info, err := nodeAPI.Info()
 	Must(err)
 	return nodeAPI, info
@@ -74,7 +73,7 @@ func SetUpMqTT(broker string, port uint, messagePubHandler func(client mqtt.Clie
 	return client
 }
 
-func SendDataMessage(api *NodeAPIClient, networkId *string, parents *MessageIDs, index string, data string) *Message {
+func SendDataMessage(api *NodeHTTPAPIClient, networkId *string, parents *MessageIDs, index string, data string) *Message {
 	m := CreateDataMessage(api, networkId, parents, index, data)
 
 	message, err := api.SubmitMessage(m)
@@ -82,7 +81,7 @@ func SendDataMessage(api *NodeAPIClient, networkId *string, parents *MessageIDs,
 	return message
 }
 
-func CreateDataMessage(api *NodeAPIClient, networkId *string, parents *MessageIDs, index string, data string) *Message {
+func CreateDataMessage(api *NodeHTTPAPIClient, networkId *string, parents *MessageIDs, index string, data string) *Message {
 	m := &Message{}
 	m.NetworkID = NetworkIDFromString(*networkId)
 	m.Payload = &Indexation{Index: []byte(index), Data: []byte(data)}
@@ -90,14 +89,14 @@ func CreateDataMessage(api *NodeAPIClient, networkId *string, parents *MessageID
 	return m
 }
 
-func SendValueMessage(api *NodeAPIClient, networkId *string, parents *MessageIDs, tx *Transaction) *Message {
+func SendValueMessage(api *NodeHTTPAPIClient, networkId *string, parents *MessageIDs, tx *Transaction) *Message {
 	m := CreateValueMessage(api, networkId, parents, tx)
 	message, err := api.SubmitMessage(m)
 	Must(err)
 	return message
 }
 
-func CreateValueMessage(api *NodeAPIClient, networkId *string, parents *MessageIDs, tx *Transaction) *Message {
+func CreateValueMessage(api *NodeHTTPAPIClient, networkId *string, parents *MessageIDs, tx *Transaction) *Message {
 	m := &Message{}
 	m.NetworkID = NetworkIDFromString(*networkId)
 	m.Payload = tx
@@ -105,17 +104,17 @@ func CreateValueMessage(api *NodeAPIClient, networkId *string, parents *MessageI
 	return m
 }
 
-func getParentsIfNil(api *NodeAPIClient, parents *MessageIDs) *MessageIDs {
+func getParentsIfNil(api *NodeHTTPAPIClient, parents *MessageIDs) *MessageIDs {
 	if parents == nil {
 		tipsResponse, err := api.Tips()
 		Must(err)
-		tips := tipsResponse.Tips
+		tips, err := tipsResponse.Tips()
+		Must(err)
 		parents = &MessageIDs{}
 		for _, tip := range tips {
-			decodeString, err := hex.DecodeString(tip)
 			Must(err)
 			var parent MessageID
-			copy(parent[:], decodeString[:])
+			copy(parent[:], tip[:])
 			*parents = append(*parents, parent)
 		}
 
