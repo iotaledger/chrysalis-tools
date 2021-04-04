@@ -4,8 +4,8 @@ import (
 	"crypto"
 	"encoding"
 	"encoding/hex"
-	. "github.com/iotaledger/iota.go/v2"
-	ed "github.com/iotaledger/iota.go/v2/ed25519"
+	. "github.com/GalRogozinski/iota.go/v2"
+	ed "github.com/GalRogozinski/iota.go/v2/ed25519"
 )
 
 const (
@@ -17,7 +17,7 @@ var (
 	MilestoneSeed = []byte{0xef, 0x13, 0xab, 0xed}
 )
 
-func SendMilestone(api *NodeAPIClient, networkId *string, parents MessageIDs, milestone Milestone) *Message {
+func SendMilestone(api *NodeHTTPAPIClient, networkId *string, parents MessageIDs, milestone Milestone) *Message {
 	message := CreateMilestoneMessage(networkId, parents, milestone)
 	msg, err := api.SubmitMessage(message)
 	Must(err)

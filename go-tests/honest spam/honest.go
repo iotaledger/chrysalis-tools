@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	iota "github.com/GalRogozinski/iota.go/v2"
 	"github.com/eclipse/paho.mqtt.golang"
 	. "github.com/iotaledger/chrysalis-tools/go-tests/lib"
-	iota "github.com/iotaledger/iota.go/v2"
 	"log"
 )
 
@@ -25,7 +25,7 @@ const (
 
 func main() {
 	endpoint := flag.String("endpoint", fmt.Sprintf("http://%s:%d", nodeUrl, apiPort), "endpoint")
-	nodeAPI := iota.NewNodeAPIClient(*endpoint)
+	nodeAPI := iota.NewNodeHTTPAPIClient(*endpoint)
 	client := SetUpMqTT(nodeUrl, mqttPort, nil, nil, nil)
 	info, err := nodeAPI.Info()
 	Must(err)

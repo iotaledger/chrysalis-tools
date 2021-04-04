@@ -6,7 +6,7 @@ import (
 	"crypto"
 	"encoding"
 	"encoding/hex"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/GalRogozinski/iota.go/v2"
 	"math/bits"
 )
 

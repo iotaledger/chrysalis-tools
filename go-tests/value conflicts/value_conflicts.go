@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
+	iota "github.com/GalRogozinski/iota.go/v2"
 	. "github.com/iotaledger/chrysalis-tools/go-tests/lib"
-	iota "github.com/iotaledger/iota.go/v2"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 
 	tx, err = iota.NewTransactionBuilder().
 		AddInput(CreateInput(&genesisAddress, genesisOutput, 0)).
-			AddOutput(CreateOutput(&address1, 1_800_000)).
+		AddOutput(CreateOutput(&address1, 1_800_000)).
 		AddIndexationPayload(&iota.Indexation{Index: []byte("value"), Data: []byte("test")}).
 		Build(signer)
 	Must(err)
