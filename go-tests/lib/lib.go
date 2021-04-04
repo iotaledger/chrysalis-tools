@@ -15,6 +15,10 @@ const (
 	LocalHost = "127.0.0.1"
 )
 
+var (
+	GenesisOutput = [TransactionIDLength]byte{}
+)
+
 func Must(err error) {
 	if err != nil {
 		panic(err)
@@ -23,7 +27,7 @@ func Must(err error) {
 
 func DefineNodeFlags() (*string, *int) {
 	nodeDomain := flag.String("node", LocalHost, "Can be either domain name or ip of the node")
-	blowballSize :=flag.Int("port", ApiPort, "Api port")
+	blowballSize := flag.Int("port", ApiPort, "Api port")
 
 	return nodeDomain, blowballSize
 }
