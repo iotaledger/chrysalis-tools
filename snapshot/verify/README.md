@@ -1,4 +1,4 @@
-# Snapshot
+# Snapshot Verify Tool
 
 This tool:
 
