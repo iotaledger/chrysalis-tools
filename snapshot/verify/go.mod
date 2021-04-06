@@ -1,4 +1,4 @@
-module github.com/iotaledger/chrysalis-tools/snapshot
+module github.com/iotaledger/chrysalis-tools/snapshot/verify
 
 go 1.16
 
