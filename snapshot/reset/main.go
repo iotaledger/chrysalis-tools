@@ -89,8 +89,7 @@ func main() {
 				utxosMu.Lock()
 				utxos[index] = outputRes
 				utxosMu.Unlock()
-				atomic.AddInt64(&loops, 1)
-				fmt.Printf("%d of %d UTXOs queried\t\r", loops, lenOutputs)
+				fmt.Printf("%d of %d UTXOs queried\t\r", atomic.AddInt64(&loops, 1), lenOutputs)
 			}(i+j, query.Data.OutputIDs[i+j])
 		}
 		wg.Wait()
