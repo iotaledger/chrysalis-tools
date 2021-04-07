@@ -103,12 +103,13 @@ func main() {
 	must(err)
 	log.Printf("treasury size: %d", treasuryRes.Amount)
 
-	if err := os.Remove(*outputFile); !os.IsNotExist(err) {
+	if err := os.Remove(*outputFile); err != nil && !os.IsNotExist(err) {
 		panic(err)
 	}
 
 	snapshotFile, err := os.OpenFile(*outputFile, os.O_RDWR|os.O_CREATE, 0666)
 	must(err)
+	defer snapshotFile.Close()
 
 	// create snapshot file
 	log.Printf("generating full snapshot file for target index %d with network ID %s", *targetIndex, *networkID)
@@ -173,9 +174,9 @@ func main() {
 	// milestone diffs
 	milestoneDiffProducerFunc := func() (*snapshot.MilestoneDiff, error) { return nil, nil }
 
+	log.Println("streaming data into snapshot file...")
 	err, _ = snapshot.StreamSnapshotDataTo(snapshotFile, uint64(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc)
 	must(err)
-	must(snapshotFile.Close())
 
 	log.Printf("done, took %v", time.Since(s))
 }
