@@ -46,9 +46,13 @@ type expectedres struct {
 func main() {
 	flag.Parse()
 
+	nodeHTTPClient := iotago.NewNodeHTTPAPIClient(*nodeURI)
+	info, err := nodeHTTPClient.Info()
+	must(err)
+
 	uri := fmt.Sprintf("%s%s", *nodeURI, *utxosRoute)
 	s := time.Now()
-	log.Printf("querying node at %s for UTXO IDs...", uri)
+	log.Printf("querying node at %s for UTXO IDs at CMI %d...", uri, info.ConfirmedMilestoneIndex)
 
 	res, err := http.Get(uri)
 	must(err)
@@ -67,8 +71,6 @@ func main() {
 	log.Printf("queried %d UTXO IDs, %v", lenOutputs, time.Since(s))
 
 	log.Printf("querying UTXOs...")
-	nodeHTTPClient := iotago.NewNodeHTTPAPIClient(*nodeURI)
-
 	var utxosMu sync.Mutex
 	utxos := make([]*iotago.NodeOutputResponse, lenOutputs)
 
