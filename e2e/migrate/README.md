@@ -1,4 +1,4 @@
-# End-to-End Migration (testing) Tools
+# End-to-End Migration SeedMap-Migration Tool
 
 Generates and broadcast migration bundles via a seedmap.csv file.
 
