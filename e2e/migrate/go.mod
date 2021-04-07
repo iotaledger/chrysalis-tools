@@ -1,4 +1,4 @@
-module github.com/iotaledger/chrysalis-tools/e2e
+module github.com/iotaledger/chrysalis-tools/e2e/migrate
 
 go 1.16
 
