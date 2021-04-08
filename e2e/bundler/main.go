@@ -256,7 +256,7 @@ func generateSparseIndexesAddressesAccount(legacyAPI *api.API, originFirstAddr t
 	secondAddr, err := address.GenerateAddress(fundsOnSparseAddrsSeed, 100, consts.SecurityLevelMedium, true)
 	must(err)
 
-	_, err = fmt.Fprintf(infoFile, "addr index %d: %s, funds: %d\n", 0, secondAddr, funds/2)
+	_, err = fmt.Fprintf(infoFile, "addr index %d: %s, funds: %d\n", 100, secondAddr, funds/2)
 
 	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, bundle.Transfers{
 		{

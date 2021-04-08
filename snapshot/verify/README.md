@@ -9,7 +9,10 @@ This tool:
 
 Migrated funds are allocated in the genesis snapshot under UTXO IDs with an empty transaction hash and up to index 126.
 When the output index goes over 126 it is wrapped to zero, and the transaction ID's last 2 bytes (holds a little endian
-encoded uint16) is incremented on each wrap around.
+encoded uint16) is incremented on each wrap around. The message ID associated with the output is all zero.
+
+Requirements:
+- The legacy node must have the `getLedgerState` API command enabled.
 
 #### Usage
 

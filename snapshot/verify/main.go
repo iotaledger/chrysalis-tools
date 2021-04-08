@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,17 +22,16 @@ import (
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/iotaledger/iota.go/v2"
-	"github.com/spf13/pflag"
 	"golang.org/x/crypto/blake2b"
 )
 
 var (
-	legacyNodeURI                = pflag.String("node", "http://localhost:14265", "the node URI of the legacy node to query")
-	minMigratedFundsAmount       = pflag.Uint64("min-migration-token-amount", 1_000_000, "the minimum amount migrated funds must have")
-	globalSnapshotFileName       = pflag.String("global-snapshot-file", "global_snapshot.csv", "the name of the global snapshot file to generate")
-	genesisSnapshotFileName      = pflag.String("genesis-snapshot-file", "genesis_snapshot.bin", "the name of the genesis snapshot file to generate")
-	genesisSnapshotFileNetworkID = pflag.String("genesis-snapshot-file-network-id", "mainnet1", "the network ID to put into the genesis snapshot")
-	genesisSnapshotTimestamp     = pflag.Uint64("genesis-snapshot-file-timestamp", 0, "the timestamp to use for the genesis snapshot")
+	legacyNodeURI                = flag.String("node", "http://localhost:14265", "the node URI of the legacy node to query")
+	minMigratedFundsAmount       = flag.Uint64("min-migration-token-amount", 1_000_000, "the minimum amount migrated funds must have")
+	globalSnapshotFileName       = flag.String("global-snapshot-file", "global_snapshot.csv", "the name of the global snapshot file to generate")
+	genesisSnapshotFileName      = flag.String("genesis-snapshot-file", "genesis_snapshot.bin", "the name of the genesis snapshot file to generate")
+	genesisSnapshotFileNetworkID = flag.String("genesis-snapshot-file-network-id", "mainnet1", "the network ID to put into the genesis snapshot")
+	genesisSnapshotTimestamp     = flag.Uint64("genesis-snapshot-file-timestamp", 0, "the timestamp to use for the genesis snapshot")
 )
 
 func must(err error) {
@@ -41,7 +41,7 @@ func must(err error) {
 }
 
 func main() {
-	pflag.Parse()
+	flag.Parse()
 
 	log.Println("querying legacy node for info...")
 	legacyAPI, err := api.ComposeAPI(api.HTTPClientSettings{
