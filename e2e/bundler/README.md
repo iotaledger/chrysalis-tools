@@ -18,10 +18,11 @@ Example:
 ./bundlers -node="https://example.com" -seed="SEED..."
 ```
 
-(mwm and output file name can also be adjusted through CLI flags)
+Note: You should compile the program with `go build -tags="pow_avx"`. MWM and output file name can also be adjusted
+through CLI flags.
 
-The provided seed must contain enough funds to fund the above mentioned accounts. Use a fast computer to not fall behind
-too much with used tips for the bundles with 100 addrs.
+The provided seed must contain enough funds (~50Gi) to fund the above mentioned accounts. Use a fast computer to not fall behind
+too much with used tips for the bundles with 100 addrs, as the program does not perform re-attachments.
 
 The runtime for this program on a modern desktop computer (Ryzen 3700X) is around 12 minutes at MWM 14.
 
