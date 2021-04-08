@@ -71,6 +71,11 @@ func generateBundles(legacyAPI *api.API, originFirstAddr trinary.Hash) {
 
 	insertSeparator(infoFile)
 
+	log.Println("generating account with sparse addresses")
+	generateSparseIndexesAddressesAccount(legacyAPI, originFirstAddr, infoFile)
+
+	insertSeparator(infoFile)
+
 	log.Println("generating account with minimum migration amount spread across many addresses")
 	minMigrationAmountSpreadAccount(legacyAPI, originFirstAddr, infoFile)
 
@@ -215,6 +220,52 @@ func generateOneAddressAccount(legacyAPI *api.API, originFirstAddr trinary.Hash,
 		{
 			Address: fundsOnOneAddr,
 			Value:   funds,
+		},
+	}, api.PrepareTransfersOptions{
+		Inputs: []api.Input{
+			{
+				Balance:  funds,
+				Address:  originFirstAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		},
+		Security: consts.SecurityLevelMedium,
+	})
+	must(err)
+
+	sendPrepBundle(legacyAPI, infoFile, prepBundle)
+}
+
+func generateSparseIndexesAddressesAccount(legacyAPI *api.API, originFirstAddr trinary.Hash, infoFile *os.File) {
+	const funds = 1_500_000
+
+	fundsOnSparseAddrsSeed := randSeed()
+
+	_, err := fmt.Fprintf(infoFile, "bundle type: %s", "funds on multiple sparse addresses\n")
+	must(err)
+
+	_, err = fmt.Fprintf(infoFile, "seed %s\naccount funds: %d\n", fundsOnSparseAddrsSeed, funds)
+	must(err)
+
+	firstAddr, err := address.GenerateAddress(fundsOnSparseAddrsSeed, 0, consts.SecurityLevelMedium, true)
+	must(err)
+
+	_, err = fmt.Fprintf(infoFile, "addr index %d: %s, funds: %d\n", 0, firstAddr, funds/2)
+
+	secondAddr, err := address.GenerateAddress(fundsOnSparseAddrsSeed, 100, consts.SecurityLevelMedium, true)
+	must(err)
+
+	_, err = fmt.Fprintf(infoFile, "addr index %d: %s, funds: %d\n", 0, secondAddr, funds/2)
+
+	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, bundle.Transfers{
+		{
+			Address: firstAddr,
+			Value:   funds / 2,
+		},
+		{
+			Address: secondAddr,
+			Value:   funds / 2,
 		},
 	}, api.PrepareTransfersOptions{
 		Inputs: []api.Input{

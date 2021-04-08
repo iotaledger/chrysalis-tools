@@ -3,6 +3,7 @@
 Generates a variety of "accounts":
 
 - Account with a single address containing more than the minimum migration amount
+- Account with two addresses (index 0 and 100) containing together more than the minimum migration amount
 - Account with the minimum migration amount spread across 100 addresses
 - Account with more than the minimum migration amount spread across 100 addresses
 - Account with a spent single address containing more than the minimum migration amount
