@@ -17,3 +17,5 @@ Requirements:
 #### Usage
 
 Run the tool with `--help` to get a list of configurable CLI params.
+It is important to declare the right network ID for the network which is supposed to bootstrap
+from the given Chrysalis Phase 2 genesis snapshot file: aka adjust `-genesis-snapshot-file-network-id="<network_id>"` accordingly.
