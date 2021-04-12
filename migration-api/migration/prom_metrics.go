@@ -35,7 +35,7 @@ type PromMetricsService struct {
 	cfg                   *PromMetricsServiceConfig
 	state                 *prommetricservicestate
 	legacyAPI             *api.API
-	c2API                 *iotago.NodeAPIClient
+	c2API                 *iotago.NodeHTTPAPIClient
 	registry              *prometheus.Registry
 	legacyWfTailsIncluded prometheus.Counter
 	receiptEntriesApplied prometheus.Counter
@@ -128,7 +128,7 @@ func (pms *PromMetricsService) Init() error {
 		return fmt.Errorf("unable to init legcy API: %w", err)
 	}
 
-	pms.c2API = iotago.NewNodeAPIClient(pms.cfg.C2Node.URI, iotago.WithNodeAPIClientHTTPClient(&http.Client{
+	pms.c2API = iotago.NewNodeHTTPAPIClient(pms.cfg.C2Node.URI, iotago.WithNodeHTTPAPIClientHTTPClient(&http.Client{
 		Timeout: pms.cfg.C2Node.Timeout,
 	}))
 

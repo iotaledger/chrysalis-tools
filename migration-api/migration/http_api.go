@@ -80,8 +80,8 @@ func (httpAPI *HTTPAPIService) Run() error {
 		return fmt.Errorf("unable to build legacy API: %w", err)
 	}
 
-	c2API := iotago.NewNodeAPIClient(httpAPI.cfg.C2Node.URI,
-		iotago.WithNodeAPIClientHTTPClient(&http.Client{Timeout: httpAPI.cfg.C2Node.Timeout}),
+	c2API := iotago.NewNodeHTTPAPIClient(httpAPI.cfg.C2Node.URI,
+		iotago.WithNodeHTTPAPIClientHTTPClient(&http.Client{Timeout: httpAPI.cfg.C2Node.Timeout}),
 	)
 
 	httpAPI.e.GET("/state", func(c echo.Context) error {
