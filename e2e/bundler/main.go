@@ -9,6 +9,7 @@ import (
 	"log"
 	mathrand "math/rand"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -29,9 +30,19 @@ var (
 	mwm          = flag.Int("mwm", 14, "the mwm to use for generated transactions/bundles")
 )
 
-func must(err error) {
-	if err != nil {
-		panic(err)
+func init() {
+	mathrand.Seed(time.Now().Unix())
+}
+
+func must(args ...interface{}) {
+	for _, arg := range args {
+		if arg == nil {
+			continue
+		}
+		if _, ok := arg.(error); !ok {
+			continue
+		}
+		panic(arg)
 	}
 }
 
@@ -45,18 +56,17 @@ func main() {
 	})
 	must(err)
 
-	firstAddr, err := address.GenerateAddress(*originSeed, 0, consts.SecurityLevelMedium, true)
-	must(err)
+	originAddr := mustAddrWithChecksum(*originSeed, 0)
 
-	balancesRes, err := legacyAPI.GetBalances(trinary.Hashes{firstAddr})
+	balancesRes, err := legacyAPI.GetBalances(trinary.Hashes{originAddr})
 	must(err)
 
 	log.Printf("there are %d tokens residing on the first address of the specified seed", balancesRes.Balances[0])
 
-	generateBundles(legacyAPI, firstAddr)
+	generateBundles(legacyAPI, originAddr)
 }
 
-func generateBundles(legacyAPI *api.API, originFirstAddr trinary.Hash) {
+func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 	s := time.Now()
 	if err := os.Remove(*infoFileName); err != nil && !os.IsNotExist(err) {
 		panic(err)
@@ -66,45 +76,290 @@ func generateBundles(legacyAPI *api.API, originFirstAddr trinary.Hash) {
 	must(err)
 	defer infoFile.Close()
 
-	log.Println("generating account with one address")
-	generateOneAddressAccount(legacyAPI, originFirstAddr, infoFile)
+	scenario("Funds (>=1Mi) on a single unspent address (low index; < 30)",
+		"Test migration with a seed with all funds on a single unspent address with index < 30.",
+		1_500_000, func() []AddrTuple {
+			targetSeed := randSeed()
+			targetAddrIndex := uint64(mathrand.Int63n(30))
 
-	insertSeparator(infoFile)
+			return []AddrTuple{
+				{
+					Seed:  targetSeed,
+					Index: targetAddrIndex,
+					Addr:  mustAddrWithChecksum(targetSeed, targetAddrIndex),
+					Value: 1_500_000,
+					Spent: false,
+				},
+			}
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  1_500_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
 
-	log.Println("generating account with sparse addresses")
-	generateSparseIndexesAddressesAccount(legacyAPI, originFirstAddr, infoFile)
+	scenario("Funds (<1Mi) on a single unspent address (low index; < 30)",
+		"Test migration with a seed with all funds on a single unspent address with index < 30.",
+		500_000, func() []AddrTuple {
+			targetSeed := randSeed()
+			targetAddrIndex := uint64(mathrand.Int63n(30))
 
-	insertSeparator(infoFile)
+			return []AddrTuple{
+				{
+					Seed:  targetSeed,
+					Index: targetAddrIndex,
+					Addr:  mustAddrWithChecksum(targetSeed, targetAddrIndex),
+					Value: 500_000,
+					Spent: false,
+				},
+			}
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  500_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
 
-	log.Println("generating account with minimum migration amount spread across many addresses")
-	minMigrationAmountSpreadAccount(legacyAPI, originFirstAddr, infoFile)
+	scenario("Funds (>=1Mi) on a single unspent address (high index)",
+		"Test migration with a seed with all funds on a single unspent address with index > 30.",
+		1_500_000, func() []AddrTuple {
+			targetSeed := randSeed()
+			targetAddrIndex := uint64(mathrand.Int63n(50) + 31)
 
-	insertSeparator(infoFile)
+			return []AddrTuple{
+				{
+					Seed:  targetSeed,
+					Index: targetAddrIndex,
+					Addr:  mustAddrWithChecksum(targetSeed, targetAddrIndex),
+					Value: 1_500_000,
+					Spent: false,
+				},
+			}
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  1_500_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
 
-	log.Println("generating account with random amounts spread across many addresses")
-	fundsSpreadAccount(legacyAPI, originFirstAddr, infoFile)
+	scenario("Funds (<1Mi) spread across many addresses",
+		"Test migration with a seed with funds < 1Mi spread across at least 100 addresses unevenly (not in sequence but rather across random address indexes)",
+		500_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(100, 200, betweenEvenSpread(500_000, 100), 0)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  500_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
 
-	insertSeparator(infoFile)
+	scenario("Funds (>=1Mi) spread across many addresses",
+		"Test migration with a seed with funds >=1Mi spread across at least 100 addresses unevenly (not in sequence but rather across random address indexes)",
+		5_000_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(100, 200, betweenEvenSpread(5_000_000, 100), 0)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  5_000_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
 
-	log.Println("generating account with one spent address")
-	generateOneSpentAddressAccount(legacyAPI, originFirstAddr, infoFile)
+	scenario("Mixture of funds (>=1Mi & <1Mi) spread across many unspent addresses",
+		"Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least 100 unspent addresses unevenly",
+		50_000_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(100, 200, betweenMaxAOrB(50_000_000, 100, 1000, 1_000_000, 0.10), 0)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  50_000_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
 
-	insertSeparator(infoFile)
+	scenario("Funds (>=1Mi) on a single spent address (low index; < 30)",
+		"Test migration with a seed with all funds >=1Mi on a single spent address with index < 30.",
+		1_500_000, func() []AddrTuple {
+			targetSeed := randSeed()
+			targetAddrIndex := uint64(mathrand.Int63n(30))
 
-	log.Println("generating account with minimum migration amount spread across many spent addresses")
-	minMigrationAmountSpreadSpentAccount(legacyAPI, originFirstAddr, infoFile)
+			return []AddrTuple{
+				{
+					Seed:  targetSeed,
+					Index: targetAddrIndex,
+					Addr:  mustAddrWithChecksum(targetSeed, targetAddrIndex),
+					Value: 1_500_000,
+					Spent: true,
+				},
+			}
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  1_500_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
 
-	insertSeparator(infoFile)
+	scenario("Funds (<1Mi) on a single spent address (low index; < 30)",
+		"Test migration with a seed with all funds on a single spent address with index < 30.",
+		500_000, func() []AddrTuple {
+			targetSeed := randSeed()
+			targetAddrIndex := uint64(mathrand.Int63n(30))
 
-	log.Println("generating account with random amounts spread across many spent addresses")
-	fundsSpreadSpentAccount(legacyAPI, originFirstAddr, infoFile)
+			return []AddrTuple{
+				{
+					Seed:  targetSeed,
+					Index: targetAddrIndex,
+					Addr:  mustAddrWithChecksum(targetSeed, targetAddrIndex),
+					Value: 500_000,
+					Spent: true,
+				},
+			}
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  500_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
+
+	scenario("Funds (<1Mi) spread across many spent addresses",
+		"Test migration with a seed with funds < 1Mi spread across at least 10 spent addresses unevenly (not in sequence but rather across random address indexes)",
+		500_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(10, 30, betweenEvenSpread(500_000, 10), 1.0)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  500_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
+
+	scenario("Funds (>=1Mi) spread across many spent addresses",
+		"Test migration with a seed with funds >=1Mi spread across at least 10 spent addresses unevenly (not in sequence but rather across random address indexes)",
+		5_000_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(10, 30, betweenEvenSpread(5_000_000, 10), 1)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  5_000_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
+
+	scenario("Mixture of funds (>=1Mi & <1Mi) spread across many spent addresses",
+		"Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least 100 spent addresses unevenly",
+		50_000_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(100, 200, betweenMaxAOrB(50_000_000, 100, 1000, 1_000_000, 0.10), 1)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  50_000_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
+
+	scenario("Mixture of funds (>=1Mi & <1Mi) spread across both spent and unspent addresses",
+		"Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least 100 spent and unspent addresses",
+		50_000_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(100, 200, betweenMaxAOrB(50_000_000, 100, 1000, 1_000_000, 0.10), 0.25)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  50_000_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
 
 	log.Printf("done, goodbye! %v\n", time.Since(s))
 }
 
-func insertSeparator(infoFile *os.File) {
-	_, err := fmt.Fprintf(infoFile, "\n#####################################\n")
-	must(err)
+type FundsOnAddr func(index uint64) uint64
+
+func betweenEvenSpread(funds uint64, addrCount int) FundsOnAddr {
+	evenSpread := funds / uint64(addrCount)
+	var sum uint64
+	var calls int
+	return func(_ uint64) uint64 {
+		if calls+1 == addrCount {
+			return funds - sum
+		}
+		fundsForAddr := uint64(mathrand.Int63n(int64(evenSpread)) + 1)
+		sum += fundsForAddr
+		calls++
+		return fundsForAddr
+	}
+}
+
+func betweenMaxAOrB(funds uint64, addrCount int, a uint64, b uint64, chanceB float64) FundsOnAddr {
+	var sum uint64
+	var calls int
+	return func(_ uint64) uint64 {
+		if calls+1 == addrCount {
+			return funds - sum
+		}
+
+		fundsForAddr := uint64(mathrand.Int63n(int64(a)) + 1)
+		if chanceB > mathrand.Float64() {
+			fundsForAddr = b
+		}
+
+		sum += fundsForAddr
+		calls++
+		return fundsForAddr
+	}
+}
+
+func fundsSpreadAcrossAddrSpace(addrCount int, addrSpace int, fundsOnAddr FundsOnAddr, chanceOfSpent float64) []AddrTuple {
+	targetSeed := randSeed()
+
+	targetAddrs := make([]AddrTuple, 0)
+	used := make(map[uint64]struct{})
+	for i := 0; i < addrCount; i++ {
+		var addrIndex uint64
+		for {
+			addrIndex = uint64(mathrand.Intn(addrSpace))
+			if _, ok := used[addrIndex]; !ok {
+				break
+			}
+		}
+		used[addrIndex] = struct{}{}
+
+		var spent bool
+		if chanceOfSpent != 0 && chanceOfSpent > mathrand.Float64() {
+			spent = true
+		}
+
+		targetAddrs = append(targetAddrs, AddrTuple{
+			Seed:  targetSeed,
+			Index: addrIndex,
+			Addr:  mustAddrWithChecksum(targetSeed, addrIndex),
+			Value: fundsOnAddr(addrIndex),
+			Spent: spent,
+		})
+	}
+
+	sort.Slice(targetAddrs, func(i, j int) bool {
+		return targetAddrs[i].Index < targetAddrs[j].Index
+	})
+
+	return targetAddrs
 }
 
 func waitUntilConfirmed(legacyAPI *api.API, tailTx *transaction.Transaction) {
@@ -129,393 +384,136 @@ func sendPrepBundle(legacyAPI *api.API, infoFile io.Writer, prepBundle []trinary
 	tailTx, err := transaction.AsTransactionObject(rdyBundle[0])
 	must(err)
 
-	_, err = fmt.Fprintf(infoFile, "tail tx: %s\nbundle hash: %s\n", tailTx.Hash, tailTx.Bundle)
-	must(err)
+	must(fmt.Fprintf(infoFile, "tail tx: %s\nbundle hash: %s\n", tailTx.Hash, tailTx.Bundle))
 
-	_, err = legacyAPI.BroadcastTransactions(rdyBundle...)
-	must(err)
+	must(legacyAPI.BroadcastTransactions(rdyBundle...))
 
 	return tailTx
 }
 
-func sendForthAndBack(legacyAPI *api.API, infoFile io.Writer, seed trinary.Trytes, originBundle []trinary.Trytes) {
+func makeAddrsSpent(legacyAPI *api.API, infoFile io.Writer, addrsTuple []AddrTuple) {
 	burnerSeed := randSeed()
-
-	txs, err := transaction.AsTransactionObjects(originBundle, nil)
-	must(err)
 
 	var transfers, backTransfers = make(bundle.Transfers, 0), make(bundle.Transfers, 0)
 	var inputs, backInputs = make([]api.Input, 0), make([]api.Input, 0)
 
-	for i, j := 0, len(txs)-1; i < j; i, j = i+1, j-1 {
-		txs[i], txs[j] = txs[j], txs[i]
-	}
-
-	for i, tx := range txs {
-		if tx.Value <= 0 {
+	for _, addrTuple := range addrsTuple {
+		if !addrTuple.Spent {
 			continue
 		}
 
-		originAddrChecksum, err := address.Checksum(tx.Address)
+		burnerAddr, err := address.GenerateAddress(burnerSeed, addrTuple.Index, consts.SecurityLevelMedium, true)
 		must(err)
 
-		addr, err := address.GenerateAddress(burnerSeed, uint64(i), consts.SecurityLevelMedium, true)
-		must(err)
-
-		transfers = append(transfers, bundle.Transfer{Address: addr, Value: uint64(tx.Value)})
+		transfers = append(transfers, bundle.Transfer{Address: burnerAddr, Value: addrTuple.Value})
 		backTransfers = append(backTransfers, bundle.Transfer{
-			Address: tx.Address + originAddrChecksum,
-			Value:   uint64(tx.Value),
+			Address: addrTuple.Addr,
+			Value:   addrTuple.Value,
 		})
 
 		inputs = append(inputs, api.Input{
-			Balance:  uint64(tx.Value),
-			Address:  tx.Address + originAddrChecksum,
-			KeyIndex: uint64(i),
+			Balance:  addrTuple.Value,
+			Address:  addrTuple.Addr,
+			KeyIndex: addrTuple.Index,
 			Security: consts.SecurityLevelMedium,
 		})
 		backInputs = append(backInputs, api.Input{
-			Balance:  uint64(tx.Value),
-			Address:  addr,
-			KeyIndex: uint64(i),
+			Balance:  addrTuple.Value,
+			Address:  burnerAddr,
+			KeyIndex: addrTuple.Index,
 			Security: consts.SecurityLevelMedium,
 		})
 	}
 
-	burnerBundle, err := legacyAPI.PrepareTransfers(seed, transfers, api.PrepareTransfersOptions{
-		Inputs:   inputs,
-		Security: consts.SecurityLevelMedium,
-	})
+	sendOffOpts := api.PrepareTransfersOptions{Inputs: inputs, Security: consts.SecurityLevelMedium}
+	sendOff, err := legacyAPI.PrepareTransfers(addrsTuple[0].Seed, transfers, sendOffOpts)
 	must(err)
 
-	tailTx := sendPrepBundle(legacyAPI, ioutil.Discard, burnerBundle)
-	log.Printf("waiting for burner bundle to be confirmed then sending back... (tail %s)", tailTx.Hash)
+	tailTx := sendPrepBundle(legacyAPI, ioutil.Discard, sendOff)
+	log.Printf("waiting for sent-off bundle to be confirmed then sending back... (tail %s)", tailTx.Hash)
 	waitUntilConfirmed(legacyAPI, tailTx)
-	log.Println("burner bundle confirmed, sending back to origin")
+	log.Println("sent-off bundle confirmed, sending back to spent addresses...")
 
-	sendBackbundle, err := legacyAPI.PrepareTransfers(burnerSeed, backTransfers, api.PrepareTransfersOptions{
-		Inputs:   backInputs,
-		Security: consts.SecurityLevelMedium,
-	})
+	sendBackOpts := api.PrepareTransfersOptions{Inputs: backInputs, Security: consts.SecurityLevelMedium}
+	sendBack, err := legacyAPI.PrepareTransfers(burnerSeed, backTransfers, sendBackOpts)
 	must(err)
 
-	sendPrepBundle(legacyAPI, infoFile, sendBackbundle)
+	sendPrepBundle(legacyAPI, infoFile, sendBack)
 }
 
-func generateOneAddressAccount(legacyAPI *api.API, originFirstAddr trinary.Hash, infoFile *os.File) {
-	const funds = 1_500_000
-
-	// funds on one address
-	fundsOnOneAddrSeed := randSeed()
-
-	_, err := fmt.Fprintf(infoFile, "bundle type: %s", "funds on one address\n")
-	must(err)
-
-	fundsOnOneAddr, err := address.GenerateAddress(fundsOnOneAddrSeed, 0, consts.SecurityLevelMedium, true)
-	must(err)
-	_, err = fmt.Fprintf(infoFile, "seed %s\nfirst addr %s\naccount funds: %d\n", fundsOnOneAddrSeed, fundsOnOneAddr, funds)
-	must(err)
-
-	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, bundle.Transfers{
-		{
-			Address: fundsOnOneAddr,
-			Value:   funds,
-		},
-	}, api.PrepareTransfersOptions{
-		Inputs: []api.Input{
-			{
-				Balance:  funds,
-				Address:  originFirstAddr,
-				KeyIndex: 0,
-				Security: consts.SecurityLevelMedium,
-			},
-		},
-		Security: consts.SecurityLevelMedium,
-	})
-	must(err)
-
-	sendPrepBundle(legacyAPI, infoFile, prepBundle)
+type AddrTuple struct {
+	Seed  trinary.Trytes
+	Index uint64
+	Addr  trinary.Hash
+	Value uint64
+	Spent bool
 }
 
-func generateSparseIndexesAddressesAccount(legacyAPI *api.API, originFirstAddr trinary.Hash, infoFile *os.File) {
-	const funds = 1_500_000
-
-	fundsOnSparseAddrsSeed := randSeed()
-
-	_, err := fmt.Fprintf(infoFile, "bundle type: %s", "funds on multiple sparse addresses\n")
+func mustAddrWithChecksum(seed string, index uint64) trinary.Trytes {
+	targetAddr, err := address.GenerateAddress(seed, index, consts.SecurityLevelMedium, true)
 	must(err)
-
-	_, err = fmt.Fprintf(infoFile, "seed %s\naccount funds: %d\n", fundsOnSparseAddrsSeed, funds)
-	must(err)
-
-	firstAddr, err := address.GenerateAddress(fundsOnSparseAddrsSeed, 0, consts.SecurityLevelMedium, true)
-	must(err)
-
-	_, err = fmt.Fprintf(infoFile, "addr index %d: %s, funds: %d\n", 0, firstAddr, funds/2)
-
-	secondAddr, err := address.GenerateAddress(fundsOnSparseAddrsSeed, 100, consts.SecurityLevelMedium, true)
-	must(err)
-
-	_, err = fmt.Fprintf(infoFile, "addr index %d: %s, funds: %d\n", 100, secondAddr, funds/2)
-
-	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, bundle.Transfers{
-		{
-			Address: firstAddr,
-			Value:   funds / 2,
-		},
-		{
-			Address: secondAddr,
-			Value:   funds / 2,
-		},
-	}, api.PrepareTransfersOptions{
-		Inputs: []api.Input{
-			{
-				Balance:  funds,
-				Address:  originFirstAddr,
-				KeyIndex: 0,
-				Security: consts.SecurityLevelMedium,
-			},
-		},
-		Security: consts.SecurityLevelMedium,
-	})
-	must(err)
-
-	sendPrepBundle(legacyAPI, infoFile, prepBundle)
+	return targetAddr
 }
 
-func minMigrationAmountSpreadAccount(legacyAPI *api.API, originFirstAddr trinary.Hash, infoFile *os.File) {
-	const funds = 1_000_000
-	const spread = 100
-
-	minMigAmountSpreadSeed := randSeed()
-
-	_, err := fmt.Fprintf(infoFile, "bundle type: %s", "minimum migration amount spread across lots of addresses\n")
-	must(err)
-
-	_, err = fmt.Fprintf(infoFile, "seed %s\naccount funds: %d\n", minMigAmountSpreadSeed, funds)
-	must(err)
-
-	addrs := make(trinary.Hashes, spread)
-	for i := 0; i < len(addrs); i++ {
-		addr, err := address.GenerateAddress(minMigAmountSpreadSeed, uint64(i), consts.SecurityLevelMedium, true)
-		must(err)
-		addrs[i] = addr
-		_, err = fmt.Fprintf(infoFile, "addr index %d: %s\n", i, addr)
-		must(err)
+func checkInputSeeds(addrsTuple []AddrTuple, infoFile *os.File) bool {
+	uniqueSeeds := make(map[string]struct{})
+	for _, addrTuple := range addrsTuple {
+		uniqueSeeds[addrTuple.Seed] = struct{}{}
 	}
 
-	transfers := make(bundle.Transfers, 0)
-	for _, addr := range addrs {
-		transfers = append(transfers, bundle.Transfer{
-			Address: addr,
-			Value:   funds / spread,
-		})
-	}
-
-	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, transfers, api.PrepareTransfersOptions{
-		Inputs: []api.Input{
-			{
-				Balance:  funds,
-				Address:  originFirstAddr,
-				KeyIndex: 0,
-				Security: consts.SecurityLevelMedium,
-			},
-		},
-		Security: consts.SecurityLevelMedium,
-	})
-	must(err)
-
-	sendPrepBundle(legacyAPI, infoFile, prepBundle)
-}
-
-func fundsSpreadAccount(legacyAPI *api.API, originFirstAddr trinary.Hash, infoFile *os.File) {
-	const funds = 10_000_000_000
-	const spread = 100
-
-	fundsSpreadSeed := randSeed()
-
-	_, err := fmt.Fprintf(infoFile, "bundle type: %s", "funds spread across lots of addresses\n")
-	must(err)
-
-	_, err = fmt.Fprintf(infoFile, "seed %s\naccount funds: %d\n", fundsSpreadSeed, funds)
-	must(err)
-
-	addrs := make(trinary.Hashes, spread)
-	for i := 0; i < len(addrs); i++ {
-		addr, err := address.GenerateAddress(fundsSpreadSeed, uint64(i), consts.SecurityLevelMedium, true)
-		must(err)
-		addrs[i] = addr
-	}
-
-	transfers := make(bundle.Transfers, 0)
-	var availFundsForDistri int64 = funds
-	var fundsPerAddrRand int64 = funds / spread
-	for i, addr := range addrs {
-		var value int64
-		if i == len(addrs)-1 {
-			value = availFundsForDistri
-		} else {
-			value = mathrand.Int63n(fundsPerAddrRand)
+	printSeedPerAddr := true
+	if len(uniqueSeeds) == 1 {
+		printSeedPerAddr = false
+		for k := range uniqueSeeds {
+			must(fmt.Fprintf(infoFile, "seed %s\n", k))
+			break
 		}
-		availFundsForDistri -= value
-		_, err = fmt.Fprintf(infoFile, "addr index %d: %s, funds: %d\n", i, addr, value)
-		must(err)
-		transfers = append(transfers, bundle.Transfer{Address: addr, Value: uint64(value)})
 	}
 
-	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, transfers, api.PrepareTransfersOptions{
-		Inputs: []api.Input{
-			{
-				Balance:  funds,
-				Address:  originFirstAddr,
-				KeyIndex: 0,
-				Security: consts.SecurityLevelMedium,
-			},
-		},
-		Security: consts.SecurityLevelMedium,
-	})
-	must(err)
-
-	sendPrepBundle(legacyAPI, infoFile, prepBundle)
+	return printSeedPerAddr
 }
 
-func generateOneSpentAddressAccount(legacyAPI *api.API, originFirstAddr trinary.Hash, infoFile *os.File) {
-	const funds = 1_500_000
-	fundsOnOneSpentAddrSeed := randSeed()
+func scenario(name string, desc string, funds uint64, addrsTuple []AddrTuple, legacyAPI *api.API, inputs []api.Input, infoFile *os.File) {
+	log.Printf("generating scenario: %s\n", name)
+	s := time.Now()
+	must(fmt.Fprintf(infoFile, "scenario: %s\n", name))
+	must(fmt.Fprintf(infoFile, "description: %s\n", desc))
+	must(fmt.Fprintf(infoFile, "account balance: %d\n", funds))
+	defer func() {
+		log.Printf("done generating scenario, took %v\n", time.Since(s))
+		must(fmt.Fprintf(infoFile, "took %v\n", time.Since(s)))
+		must(fmt.Fprintf(infoFile, "\n#####################################\n"))
+	}()
 
-	_, err := fmt.Fprintf(infoFile, "bundle type: %s", "funds on one spent address\n")
-	must(err)
+	printSeedPerAddr := checkInputSeeds(addrsTuple, infoFile)
 
-	fundsOnOneSpentAddr, err := address.GenerateAddress(fundsOnOneSpentAddrSeed, 0, consts.SecurityLevelMedium, true)
-	must(err)
-	_, err = fmt.Fprintf(infoFile, "seed %s\nfirst addr %s\naccount funds: %d\n", fundsOnOneSpentAddrSeed, fundsOnOneSpentAddr, funds)
-	must(err)
-
-	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, bundle.Transfers{
-		{
-			Address: fundsOnOneSpentAddr,
-			Value:   funds,
-		},
-	}, api.PrepareTransfersOptions{
-		Inputs: []api.Input{
-			{
-				Balance:  funds,
-				Address:  originFirstAddr,
-				KeyIndex: 0,
-				Security: consts.SecurityLevelMedium,
-			},
-		},
-		Security: consts.SecurityLevelMedium,
-	})
-	must(err)
-
-	tailTx := sendPrepBundle(legacyAPI, infoFile, prepBundle)
-
-	waitUntilConfirmed(legacyAPI, tailTx)
-	log.Println("bundle confirmed, doing key-reuse forth-and-back")
-	sendForthAndBack(legacyAPI, infoFile, fundsOnOneSpentAddrSeed, prepBundle)
-}
-
-func minMigrationAmountSpreadSpentAccount(legacyAPI *api.API, originFirstAddr trinary.Hash, infoFile *os.File) {
-	const funds = 1_000_000
-	const spread = 100
-
-	minMigAmountSpreadSpentSeed := randSeed()
-
-	_, err := fmt.Fprintf(infoFile, "bundle type: %s", "minimum migration amount spread across lots of spent addresses\n")
-	must(err)
-
-	_, err = fmt.Fprintf(infoFile, "seed %s\naccount funds: %d\n", minMigAmountSpreadSpentSeed, funds)
-	must(err)
-
-	addrs := make(trinary.Hashes, spread)
-	for i := 0; i < len(addrs); i++ {
-		addr, err := address.GenerateAddress(minMigAmountSpreadSpentSeed, uint64(i), consts.SecurityLevelMedium, true)
-		must(err)
-		addrs[i] = addr
-		_, err = fmt.Fprintf(infoFile, "addr index %d: %s\n", i, addr)
-		must(err)
-	}
-
-	transfers := make(bundle.Transfers, 0)
-	for _, addr := range addrs {
-		transfers = append(transfers, bundle.Transfer{
-			Address: addr,
-			Value:   funds / spread,
-		})
-	}
-
-	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, transfers, api.PrepareTransfersOptions{
-		Inputs: []api.Input{
-			{
-				Balance:  funds,
-				Address:  originFirstAddr,
-				KeyIndex: 0,
-				Security: consts.SecurityLevelMedium,
-			},
-		},
-		Security: consts.SecurityLevelMedium,
-	})
-	must(err)
-
-	tailTx := sendPrepBundle(legacyAPI, infoFile, prepBundle)
-	waitUntilConfirmed(legacyAPI, tailTx)
-	log.Println("bundle confirmed, doing key-reuse forth-and-back")
-	sendForthAndBack(legacyAPI, infoFile, minMigAmountSpreadSpentSeed, prepBundle)
-}
-
-func fundsSpreadSpentAccount(legacyAPI *api.API, originFirstAddr trinary.Hash, infoFile *os.File) {
-	const funds = 10_000_000_000
-	const spread = 100
-
-	fundsSpreadSpentSeed := randSeed()
-
-	_, err := fmt.Fprintf(infoFile, "bundle type: %s", "funds spread across lots of spent addresses\n")
-	must(err)
-
-	_, err = fmt.Fprintf(infoFile, "seed %s\naccount funds: %d\n", fundsSpreadSpentSeed, funds)
-	must(err)
-
-	addrs := make(trinary.Hashes, spread)
-	for i := 0; i < len(addrs); i++ {
-		addr, err := address.GenerateAddress(fundsSpreadSpentSeed, uint64(i), consts.SecurityLevelMedium, true)
-		must(err)
-		addrs[i] = addr
-	}
-
-	transfers := make(bundle.Transfers, 0)
-	var availFundsForDistri int64 = funds
-	var fundsPerAddrRand int64 = funds / spread
-	for i, addr := range addrs {
-		var value int64
-		if i == len(addrs)-1 {
-			value = availFundsForDistri
-		} else {
-			value = mathrand.Int63n(fundsPerAddrRand)
+	transfers := bundle.Transfers{}
+	var shouldAnyBeSpent bool
+	for _, addrTuple := range addrsTuple {
+		transfers = append(transfers, bundle.Transfer{Address: addrTuple.Addr, Value: addrTuple.Value})
+		if addrTuple.Spent {
+			shouldAnyBeSpent = true
 		}
-		availFundsForDistri -= value
-		_, err = fmt.Fprintf(infoFile, "addr index %d: %s, funds: %d\n", i, addr, value)
-		must(err)
-		transfers = append(transfers, bundle.Transfer{Address: addr, Value: uint64(value)})
+		if printSeedPerAddr {
+			must(fmt.Fprintf(infoFile, "seed %s\naddr index %d: %s, spent=%v, - %d\n", addrTuple.Seed, addrTuple.Index, addrTuple.Addr, addrTuple.Spent, addrTuple.Value))
+			continue
+		}
+		must(fmt.Fprintf(infoFile, "addr index %d: %s, spent=%v - %d\n", addrTuple.Index, addrTuple.Addr, addrTuple.Spent, addrTuple.Value))
 	}
 
-	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, transfers, api.PrepareTransfersOptions{
-		Inputs: []api.Input{
-			{
-				Balance:  funds,
-				Address:  originFirstAddr,
-				KeyIndex: 0,
-				Security: consts.SecurityLevelMedium,
-			},
-		},
-		Security: consts.SecurityLevelMedium,
-	})
+	opts := api.PrepareTransfersOptions{Inputs: inputs, Security: consts.SecurityLevelMedium}
+	prepBundle, err := legacyAPI.PrepareTransfers(*originSeed, transfers, opts)
 	must(err)
 
 	tailTx := sendPrepBundle(legacyAPI, infoFile, prepBundle)
+
+	if !shouldAnyBeSpent {
+		return
+	}
+
+	log.Printf("waiting for scenario bundle to be confirmed before sending forth/back to spent addrs... (tail %s)", tailTx.Hash)
 	waitUntilConfirmed(legacyAPI, tailTx)
-	log.Println("bundle confirmed, doing key-reuse forth-and-back")
-	sendForthAndBack(legacyAPI, infoFile, fundsSpreadSpentSeed, prepBundle)
+	makeAddrsSpent(legacyAPI, infoFile, addrsTuple)
 }
 
 func randSeed() string {
