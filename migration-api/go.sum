@@ -193,6 +193,8 @@ github.com/iotaledger/chrysalis-tools/common v0.0.0-20210302085527-49aef3f01273 
 github.com/iotaledger/chrysalis-tools/common v0.0.0-20210302085527-49aef3f01273/go.mod h1:oUL4ryVXpZ/PfrD0xwqi6jMMLlOhSePoblmyMVE5Bb8=
 github.com/iotaledger/chrysalis-tools/common v0.0.0-20210310095909-b38c905df767 h1:A3wqdtEyxSHmFdiqa+AgS32hn+XsH3AW550mpSKiyiA=
 github.com/iotaledger/chrysalis-tools/common v0.0.0-20210310095909-b38c905df767/go.mod h1:oUL4ryVXpZ/PfrD0xwqi6jMMLlOhSePoblmyMVE5Bb8=
+github.com/iotaledger/chrysalis-tools/common v0.0.0-20210409121122-99f018016da3 h1:LCmiz5a+7n8HgyMdLYx3ZoGa2/m3pJ0Qinw9USsWoKk=
+github.com/iotaledger/chrysalis-tools/common v0.0.0-20210409121122-99f018016da3/go.mod h1:oUL4ryVXpZ/PfrD0xwqi6jMMLlOhSePoblmyMVE5Bb8=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7 h1:DIVriS1iEEOPrYwQ/vpHLsnVtmUpj4S+2UI4Jl+48ZQ=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210406071024-a52cf8c2c21e h1:J8SDeVkkK5u0MKKusDy4hOBK3xRDpuGpuMLZkLCkEyk=
