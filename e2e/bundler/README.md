@@ -15,7 +15,7 @@ of which their seed, bundle hash and addresses are written to a `bundles.csv`.
 Example:
 
 ```
-./bundlers -node="https://example.com" -seed="SEED..."
+./bundler -node="https://example.com" -seed="SEED..."
 ```
 
 Note: You should compile the program with `go build -tags="pow_avx"`. MWM and output file name can also be adjusted
