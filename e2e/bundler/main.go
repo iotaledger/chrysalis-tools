@@ -481,6 +481,7 @@ func checkInputSeeds(addrsTuple []AddrTuple, infoFile *os.File) bool {
 
 func scenario(name string, desc string, funds uint64, addrsTuple []AddrTuple, legacyAPI *api.API, inputs []api.Input, infoFile *os.File) {
 	log.Printf("generating scenario: %s\n", name)
+	log.Printf("description: %s\n", desc)
 	s := time.Now()
 	must(fmt.Fprintf(infoFile, "scenario: %s\n", name))
 	must(fmt.Fprintf(infoFile, "description: %s\n", desc))
