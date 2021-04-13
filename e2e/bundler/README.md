@@ -140,9 +140,10 @@ Usage:
 ```
 
 The provided seed must contain enough funds (~50Gi) to fund the above mentioned accounts. Use a fast computer to not
-fall behind too much with used tips for the bundles with 100 addrs, as the program does not perform re-attachments.
+fall behind too much for scenarios with many addresses, as the program does not perform re-attachments; otherwise adjust
+the corresponding `--manyAddrsXXXCount`/`--manyAddrsXXXSpace` parameters accordingly.
 
-The runtime for this program on a modern desktop computer (Ryzen 3700X) is around 12 minutes at MWM 14.
+The runtime for this program on a modern desktop computer (Ryzen 3700X) is around 13 minutes at MWM 14.
 
 Stdout example:
 
