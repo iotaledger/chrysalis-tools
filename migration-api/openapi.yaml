@@ -152,7 +152,7 @@ components:
       items:
         type: object
         properties:
-          embbeddedInMilestoneIndex:
+          embeddedInMilestoneIndex:
             type: number
             description: The index in which this receipt was embedded in the Chrysalis Phase 2 network.
           legacyMilestoneIndex:
