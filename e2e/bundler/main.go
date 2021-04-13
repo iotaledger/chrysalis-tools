@@ -24,10 +24,16 @@ import (
 )
 
 var (
-	nodeAPIURI   = flag.String("node", "https://api.coo.manapotion.io", "the API URI of the node")
-	originSeed   = flag.String("seed", strings.Repeat("9", consts.HashTrytesSize), "the seed to use to fund the created bundles")
-	infoFileName = flag.String("info-file", "bundles.csv", "the file containing the different generated bundles")
-	mwm          = flag.Int("mwm", 14, "the mwm to use for generated transactions/bundles")
+	nodeAPIURI               = flag.String("node", "https://api.coo.manapotion.io", "the API URI of the node")
+	originSeed               = flag.String("seed", strings.Repeat("9", consts.HashTrytesSize), "the seed to use to fund the created bundles")
+	infoFileName             = flag.String("info-file", "bundles.csv", "the file containing the different generated bundles")
+	manyAddrsCount           = flag.Int("manyAddrsCount", 100, "the addrs count to use for scenarios which involve many addresses")
+	manyAddrsSpace           = flag.Int("manyAddrsSpace", 200, "the index space to use for scenarios which involve many addresses")
+	manyAddrsSpentCount      = flag.Int("manyAddrsSpentCount", 10, "the addrs count to use for scenarios which involve many spent addresses")
+	manyAddrsSpentSpace      = flag.Int("manyAddrsSpentSpace", 30, "the index space to use for scenarios which involve many spent addresses")
+	manyAddrsSpentMixedCount = flag.Int("manyAddrsSpentMixedCount", 100, "the addrs count to use for scenarios which involve many unspent/spent addresses")
+	manyAddrsSpentMixedSpace = flag.Int("manyAddrsSpentMixedSpace", 200, "the index space to use for scenarios which involve many unspent/spent addresses")
+	mwm                      = flag.Int("mwm", 14, "the mwm to use for generated transactions/bundles")
 )
 
 func init() {
@@ -149,9 +155,9 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 		}, infoFile)
 
 	scenario("Funds (<1Mi) spread across many addresses",
-		"Test migration with a seed with funds < 1Mi spread across at least 100 addresses unevenly (not in sequence but rather across random address indexes)",
+		fmt.Sprintf("Test migration with a seed with funds < 1Mi spread across at least %d addresses unevenly (not in sequence but rather across random address indexes)", *manyAddrsCount),
 		500_000, func() []AddrTuple {
-			return fundsSpreadAcrossAddrSpace(100, 200, betweenEvenSpread(500_000, 100), 0)
+			return fundsSpreadAcrossAddrSpace(*manyAddrsCount, *manyAddrsSpace, betweenEvenSpread(500_000, *manyAddrsCount), 0)
 		}(), legacyAPI, []api.Input{
 			{
 				Balance:  500_000,
@@ -162,9 +168,9 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 		}, infoFile)
 
 	scenario("Funds (>=1Mi) spread across many addresses",
-		"Test migration with a seed with funds >=1Mi spread across at least 100 addresses unevenly (not in sequence but rather across random address indexes)",
+		fmt.Sprintf("Test migration with a seed with funds >=1Mi spread across at least %d addresses unevenly (not in sequence but rather across random address indexes)", *manyAddrsCount),
 		5_000_000, func() []AddrTuple {
-			return fundsSpreadAcrossAddrSpace(100, 200, betweenEvenSpread(5_000_000, 100), 0)
+			return fundsSpreadAcrossAddrSpace(*manyAddrsCount, *manyAddrsSpace, betweenEvenSpread(5_000_000, *manyAddrsCount), 0)
 		}(), legacyAPI, []api.Input{
 			{
 				Balance:  5_000_000,
@@ -175,9 +181,9 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 		}, infoFile)
 
 	scenario("Mixture of funds (>=1Mi & <1Mi) spread across many unspent addresses",
-		"Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least 100 unspent addresses unevenly",
+		fmt.Sprintf("Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least %d unspent addresses unevenly", *manyAddrsCount),
 		50_000_000, func() []AddrTuple {
-			return fundsSpreadAcrossAddrSpace(100, 200, betweenMaxAOrB(50_000_000, 100, 1000, 1_000_000, 0.10), 0)
+			return fundsSpreadAcrossAddrSpace(*manyAddrsCount, *manyAddrsSpace, betweenMaxAOrB(50_000_000, *manyAddrsCount, 1000, 1_000_000, 0.10), 0)
 		}(), legacyAPI, []api.Input{
 			{
 				Balance:  50_000_000,
@@ -236,9 +242,9 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 		}, infoFile)
 
 	scenario("Funds (<1Mi) spread across many spent addresses",
-		"Test migration with a seed with funds < 1Mi spread across at least 10 spent addresses unevenly (not in sequence but rather across random address indexes)",
+		fmt.Sprintf("Test migration with a seed with funds < 1Mi spread across at least %d spent addresses unevenly (not in sequence but rather across random address indexes)", *manyAddrsSpentCount),
 		500_000, func() []AddrTuple {
-			return fundsSpreadAcrossAddrSpace(10, 30, betweenEvenSpread(500_000, 10), 1.0)
+			return fundsSpreadAcrossAddrSpace(*manyAddrsSpentCount, *manyAddrsSpentSpace, betweenEvenSpread(500_000, *manyAddrsSpentCount), 1.0)
 		}(), legacyAPI, []api.Input{
 			{
 				Balance:  500_000,
@@ -249,9 +255,9 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 		}, infoFile)
 
 	scenario("Funds (>=1Mi) spread across many spent addresses",
-		"Test migration with a seed with funds >=1Mi spread across at least 10 spent addresses unevenly (not in sequence but rather across random address indexes)",
+		fmt.Sprintf("Test migration with a seed with funds >=1Mi spread across at least %d spent addresses unevenly (not in sequence but rather across random address indexes)", *manyAddrsSpentCount),
 		5_000_000, func() []AddrTuple {
-			return fundsSpreadAcrossAddrSpace(10, 30, betweenEvenSpread(5_000_000, 10), 1)
+			return fundsSpreadAcrossAddrSpace(*manyAddrsSpentCount, *manyAddrsSpentSpace, betweenEvenSpread(5_000_000, *manyAddrsSpentCount), 1)
 		}(), legacyAPI, []api.Input{
 			{
 				Balance:  5_000_000,
@@ -262,9 +268,9 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 		}, infoFile)
 
 	scenario("Mixture of funds (>=1Mi & <1Mi) spread across many spent addresses",
-		"Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least 100 spent addresses unevenly",
+		fmt.Sprintf("Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least %d spent addresses unevenly", *manyAddrsSpentCount),
 		50_000_000, func() []AddrTuple {
-			return fundsSpreadAcrossAddrSpace(100, 200, betweenMaxAOrB(50_000_000, 100, 1000, 1_000_000, 0.10), 1)
+			return fundsSpreadAcrossAddrSpace(*manyAddrsSpentCount, *manyAddrsSpentSpace, betweenMaxAOrB(50_000_000, *manyAddrsSpentCount, 1000, 1_000_000, 0.10), 1)
 		}(), legacyAPI, []api.Input{
 			{
 				Balance:  50_000_000,
@@ -275,9 +281,9 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 		}, infoFile)
 
 	scenario("Mixture of funds (>=1Mi & <1Mi) spread across both spent and unspent addresses",
-		"Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least 100 spent and unspent addresses",
+		fmt.Sprintf("Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least %d spent and unspent addresses", *manyAddrsSpentMixedCount),
 		50_000_000, func() []AddrTuple {
-			return fundsSpreadAcrossAddrSpace(100, 200, betweenMaxAOrB(50_000_000, 100, 1000, 1_000_000, 0.10), 0.25)
+			return fundsSpreadAcrossAddrSpace(*manyAddrsSpentMixedCount, *manyAddrsSpentMixedSpace, betweenMaxAOrB(50_000_000, *manyAddrsSpentMixedCount, 1000, 1_000_000, 0.10), 0.25)
 		}(), legacyAPI, []api.Input{
 			{
 				Balance:  50_000_000,

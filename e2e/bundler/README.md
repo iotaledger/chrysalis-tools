@@ -114,8 +114,33 @@ Example:
 Note: You should compile the program with `go build -tags="pow_avx"`. MWM and output file name can also be adjusted
 through CLI flags.
 
-The provided seed must contain enough funds (~50Gi) to fund the above mentioned accounts. Use a fast computer to not fall behind
-too much with used tips for the bundles with 100 addrs, as the program does not perform re-attachments.
+Usage:
+
+```
+  -info-file string
+        the file containing the different generated bundles (default "bundles.csv")
+  -manyAddrsCount int
+        the addrs count to use for scenarios which involve many addresses (default 100)
+  -manyAddrsSpace int
+        the index space to use for scenarios which involve many addresses (default 200)
+  -manyAddrsSpentCount int
+        the addrs count to use for scenarios which involve many spent addresses (default 10)
+  -manyAddrsSpentSpace int
+        the index space to use for scenarios which involve many spent addresses (default 30)
+  -manyAddrsSpentMixedCount int
+        the addrs count to use for scenarios which involve many unspent/spent addresses (default 100)
+  -manyAddrsSpentMixedSpace int
+        the index space to use for scenarios which involve many unspent/spent addresses (default 200)
+  -mwm int
+        the mwm to use for generated transactions/bundles (default 14)
+  -node string
+        the API URI of the node (default "https://example.com")
+  -seed string
+        the seed to use to fund the created bundles (default "999999999999999999999999999999999999999999999999999999999999999999999999999999999")
+```
+
+The provided seed must contain enough funds (~50Gi) to fund the above mentioned accounts. Use a fast computer to not
+fall behind too much with used tips for the bundles with 100 addrs, as the program does not perform re-attachments.
 
 The runtime for this program on a modern desktop computer (Ryzen 3700X) is around 12 minutes at MWM 14.
 
