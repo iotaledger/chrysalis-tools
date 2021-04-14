@@ -180,6 +180,22 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 			},
 		}, infoFile)
 
+	scenario("Funds spread across many addresses with each >=1Mi",
+		fmt.Sprintf("Test migration with a seed with funds spread across at least %d addresses with each having >=1Mi unevenly (not in sequence but rather across random address indexes)", *manyAddrsCount),
+		uint64(*manyAddrsCount)*1_500_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(*manyAddrsCount, *manyAddrsSpace, func(index uint64) uint64 {
+				// all get the same amount
+				return 1_500_000
+			}, 0)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  uint64(*manyAddrsSpentCount) * 1_500_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
+
 	scenario("Mixture of funds (>=1Mi & <1Mi) spread across many unspent addresses",
 		fmt.Sprintf("Test migration with a seed with a mixture of funds >=1Mi & <1Mi spread across at least %d unspent addresses unevenly", *manyAddrsCount),
 		50_000_000, func() []AddrTuple {
@@ -261,6 +277,22 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 		}(), legacyAPI, []api.Input{
 			{
 				Balance:  5_000_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
+
+	scenario("Funds spread across many spent addresses with each >=1Mi",
+		fmt.Sprintf("Test migration with a seed with funds spread across at least %d spent addresses with each having >=1Mi unevenly (not in sequence but rather across random address indexes)", *manyAddrsSpentCount),
+		uint64(*manyAddrsSpentCount)*1_500_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(*manyAddrsSpentCount, *manyAddrsSpentSpace, func(index uint64) uint64 {
+				// all get the same amount
+				return 1_500_000
+			}, 1)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  uint64(*manyAddrsSpentCount) * 1_500_000,
 				Address:  originAddr,
 				KeyIndex: 0,
 				Security: consts.SecurityLevelMedium,
