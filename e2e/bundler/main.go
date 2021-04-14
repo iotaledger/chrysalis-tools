@@ -189,7 +189,7 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 			}, 0)
 		}(), legacyAPI, []api.Input{
 			{
-				Balance:  uint64(*manyAddrsSpentCount) * 1_500_000,
+				Balance:  uint64(*manyAddrsCount) * 1_500_000,
 				Address:  originAddr,
 				KeyIndex: 0,
 				Security: consts.SecurityLevelMedium,
