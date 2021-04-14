@@ -89,12 +89,13 @@ func (httpAPI *HTTPAPIService) Run() error {
 		state := &StateResponse{}
 
 		treasuryRes, err := c2API.Treasury()
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to query treasury: %v", err))
+		switch {
+		case err == nil:
+			state.TreasuryTokens = treasuryRes.Amount
+			state.TokensMigrated = consts.TotalSupply - treasuryRes.Amount
+		default:
+			state.TreasuryTokens = consts.TotalSupply
 		}
-
-		state.TreasuryTokens = treasuryRes.Amount
-		state.TokensMigrated = consts.TotalSupply - treasuryRes.Amount
 
 		legacyNodeInfo, err := legacyAPI.GetNodeInfo()
 		if err != nil {
