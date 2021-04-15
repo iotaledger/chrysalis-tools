@@ -28,6 +28,7 @@ import (
 var (
 	legacyNodeURI                = flag.String("node", "http://localhost:14265", "the node URI of the legacy node to query")
 	minMigratedFundsAmount       = flag.Uint64("min-migration-token-amount", 1_000_000, "the minimum amount migrated funds must have")
+	countEligibleSpentAddrs      = flag.Bool("count-eligible-spent-addrs", false, "whether to count how many eligible addresses for the migration are spent")
 	globalSnapshotFileName       = flag.String("global-snapshot-file", "global_snapshot.csv", "the name of the global snapshot file to generate")
 	genesisSnapshotFileName      = flag.String("genesis-snapshot-file", "genesis_snapshot.bin", "the name of the genesis snapshot file to generate")
 	genesisSnapshotFileNetworkID = flag.String("genesis-snapshot-file-network-id", "mainnet1", "the network ID to put into the genesis snapshot")
@@ -97,6 +98,7 @@ func main() {
 
 	legacyLedgerEntriesHash, err := blake2b.New256(nil)
 	must(err)
+	var eligibleSpentAddrsCount, eligibleAddrsInvalidLastTritCount uint64
 	for _, entry := range legacyLedgerEntries {
 		legacyLedgerEntriesHash.Write([]byte(fmt.Sprintf("%s%d", entry.addr, entry.balance)))
 
@@ -116,15 +118,36 @@ func main() {
 			continue
 		}
 
-		if entry.balance >= *minMigratedFundsAmount {
-			eligibleAddrsForMigration++
-			eligibleAddrsTokensTotal += entry.balance
+		if entry.balance < *minMigratedFundsAmount {
+			continue
+		}
+
+		eligibleAddrsForMigration++
+		eligibleAddrsTokensTotal += entry.balance
+		if !*countEligibleSpentAddrs {
+			continue
+		}
+
+		eligibleAddrChecksum, err := address.Checksum(entry.addr)
+		if err != nil {
+			eligibleAddrsInvalidLastTritCount++
+			continue
+		}
+		spentRes, err := legacyAPI.WereAddressesSpentFrom(entry.addr + eligibleAddrChecksum)
+		must(err)
+		if spentRes[0] {
+			eligibleSpentAddrsCount++
 		}
 	}
 
 	log.Println("ledger state integrity hash:", hex.EncodeToString(legacyLedgerEntriesHash.Sum(nil)))
 	log.Printf("migration: addrs %d, tokens total %d", len(migrations), totalMigration)
-	log.Printf("eligible for migration: addrs %d, tokens total %d", eligibleAddrsForMigration, eligibleAddrsTokensTotal)
+	if *countEligibleSpentAddrs {
+		log.Printf("eligible for migration: addrs %d (spent %d, invalid last trit %d), tokens total %d",
+			eligibleAddrsForMigration, eligibleSpentAddrsCount, eligibleAddrsInvalidLastTritCount, eligibleAddrsTokensTotal)
+	} else {
+		log.Printf("eligible for migration: addrs %d, tokens total %d", eligibleAddrsForMigration, eligibleAddrsTokensTotal)
+	}
 
 	genesisSnapshotFile, err := os.OpenFile(*genesisSnapshotFileName, os.O_TRUNC|os.O_CREATE|os.O_RDWR, os.ModePerm)
 	must(err)
