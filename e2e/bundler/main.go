@@ -325,6 +325,22 @@ func generateBundles(legacyAPI *api.API, originAddr trinary.Trytes) {
 			},
 		}, infoFile)
 
+	scenario("Funds spread across many spent and unspent addresses with each >=1Mi",
+		fmt.Sprintf("Test migration with a seed with funds spread across at least %d spent and unspent addresses with each having >=1Mi unevenly (not in sequence but rather across random address indexes)", *manyAddrsSpentMixedCount),
+		uint64(*manyAddrsSpentMixedCount)*1_500_000, func() []AddrTuple {
+			return fundsSpreadAcrossAddrSpace(*manyAddrsSpentMixedCount, *manyAddrsSpentMixedSpace, func(index uint64) uint64 {
+				// all get the same amount
+				return 1_500_000
+			}, 0.25)
+		}(), legacyAPI, []api.Input{
+			{
+				Balance:  uint64(*manyAddrsSpentMixedCount) * 1_500_000,
+				Address:  originAddr,
+				KeyIndex: 0,
+				Security: consts.SecurityLevelMedium,
+			},
+		}, infoFile)
+
 	log.Printf("done, goodbye! %v\n", time.Since(s))
 }
 
