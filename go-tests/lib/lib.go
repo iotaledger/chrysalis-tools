@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
 	. "github.com/GalRogozinski/iota.go/v2"
@@ -13,6 +14,15 @@ const (
 	MqttPort  = 1883
 	LocalHost = "127.0.0.1"
 )
+
+/**
+private key, public key, and address
+*/
+type KeyTriplet struct {
+	Sk      ed.PrivateKey
+	Pk      ed.PublicKey
+	Address Ed25519Address
+}
 
 var (
 	GenesisOutput = [TransactionIDLength]byte{}
@@ -166,4 +176,20 @@ func GenerateAddressFromSeed(seed []byte) (ed.PrivateKey, ed.PublicKey, Ed25519A
 	privateKey, publicKey := GenerateKeys(seed)
 	address := AddressFromEd25519PubKey(publicKey)
 	return privateKey, publicKey, address
+}
+
+/**
+Returns lists of keys and addresses
+*/
+func GenerateKeyChain(chainLength int, buf_offset int) (keyTriplets []KeyTriplet) {
+	var chain []KeyTriplet
+
+	for i := 1; i <= chainLength; i++ {
+		buf := make([]byte, 4)
+		binary.PutUvarint(buf, uint64(i+buf_offset))
+		seed := CreateSeed(buf)
+		sk, pk, address := GenerateAddressFromSeed(seed)
+		chain = append(chain, KeyTriplet{sk, pk, address})
+	}
+	return chain
 }

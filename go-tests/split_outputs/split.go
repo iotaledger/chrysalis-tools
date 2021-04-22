@@ -14,9 +14,12 @@ func main() {
 	nodeDomain, apiPort := DefineNodeFlags()
 	amount := flag.Uint64("amount", 7_936_447_619_000, "How much iotas should be split to each output")
 	flag.Parse()
-
 	nodeAPI, nodeInfo := ObtainAPI(*nodeDomain, *apiPort)
 
+	SplitFunds(nodeAPI, nodeInfo, amount)
+}
+
+func SplitFunds(nodeAPI *iota.NodeHTTPAPIClient, nodeInfo *iota.NodeInfoResponse, amount *uint64) []KeyTriplet {
 	seed := CreateSeed([]byte{0xde, 0xad, 0xbe, 0xef})
 	privateKey, _, address1 := GenerateAddressFromSeed(seed)
 	signer := iota.NewInMemoryAddressSigner(iota.AddressKeys{
@@ -27,12 +30,9 @@ func main() {
 		AddInput(CreateInput(&address1, GenesisOutput, 0)).
 		AddIndexationPayload(&iota.Indexation{Index: []byte("split"), Data: []byte("126")})
 
-	for i := 1; i < 127; i++ {
-		buf := make([]byte, 4)
-		binary.PutUvarint(buf, uint64(i))
-		seed = CreateSeed(buf)
-		_, _, address := GenerateAddressFromSeed(seed)
-		txBuilder.AddOutput(CreateOutput(&address, *amount))
+	keyTriplets := GenerateKeyChain(126, 0)
+	for i := 0; i < len(keyTriplets); i++ {
+		txBuilder.AddOutput(CreateOutput(&keyTriplets[i].Address, *amount))
 	}
 
 	var last_bal uint64 = 1_000_005_000_000_061 - (*amount * 126)
@@ -52,4 +52,6 @@ func main() {
 	transactionID, err := tx.ID()
 	Must(err)
 	log.Println("tx has is ", hex.EncodeToString(transactionID[:]))
+
+	return keyTriplets
 }
