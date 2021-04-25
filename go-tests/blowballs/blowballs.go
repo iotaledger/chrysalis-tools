@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/hex"
 	"flag"
+	iota "github.com/GalRogozinski/iota.go/v2"
 	. "github.com/iotaledger/chrysalis-tools/go-tests/lib"
-	iota "github.com/iotaledger/iota.go/v2"
 	"log"
 )
 
