@@ -46,7 +46,7 @@ func main() {
 
 func invalidSpam(api *iota.NodeHTTPAPIClient, info *iota.NodeInfoResponse, triplets []KeyTriplet, signer iota.AddressSigner) {
 	//for each address
-	for i := 0; i < len(triplets); i++ {
+	for i := 0; i < len(triplets)-1; i++ {
 		txBuilder := iota.NewTransactionBuilder()
 		//query outputs in address
 		addr := &triplets[i].Address
@@ -103,7 +103,7 @@ func randAddress(tripletCopy []KeyTriplet) (iota.Ed25519Address, []KeyTriplet) {
 }
 
 func outOfOrderSpam(api *iota.NodeHTTPAPIClient, info *iota.NodeInfoResponse, triplets []KeyTriplet, signer iota.AddressSigner) {
-	size := len(triplets)
+	size := len(triplets) - 1
 
 	var futureIn []futInput
 	//for each address
@@ -182,7 +182,7 @@ func CreateSigner(triplets []KeyTriplet) iota.AddressSigner {
 }
 
 func circularSpam(api *iota.NodeHTTPAPIClient, info *iota.NodeInfoResponse, triplets []KeyTriplet, signer iota.AddressSigner) {
-	size := len(triplets)
+	size := len(triplets) - 1
 	//for each address
 	for i := 0; i < size; i++ {
 		txBuilder := iota.NewTransactionBuilder()
@@ -207,7 +207,7 @@ func circularSpam(api *iota.NodeHTTPAPIClient, info *iota.NodeInfoResponse, trip
 
 func conflictingSpam(api *iota.NodeHTTPAPIClient, info *iota.NodeInfoResponse, triplets []KeyTriplet, signer iota.AddressSigner) {
 	//for each address
-	for i := 0; i < len(triplets); i++ {
+	for i := 0; i < len(triplets)-1; i++ {
 		tripletsCopy := make([]KeyTriplet, len(triplets))
 		//query outputs in address
 		addr := triplets[i].Address
