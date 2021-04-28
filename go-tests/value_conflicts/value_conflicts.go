@@ -19,7 +19,7 @@ func main() {
 	privateKey, _, address1 := GenerateAddressFromSeed(seed)
 	signer := iota.NewInMemoryAddressSigner(iota.AddressKeys{
 		Address: &address1,
-		Keys:    &privateKey,
+		Keys:    privateKey,
 	})
 
 	tx, err := iota.NewTransactionBuilder().
