@@ -26,14 +26,15 @@ import (
 )
 
 var (
-	legacyNodeURI                = flag.String("node", "http://localhost:14265", "the node URI of the legacy node to query")
-	minMigratedFundsAmount       = flag.Uint64("min-migration-token-amount", 1_000_000, "the minimum amount migrated funds must have")
-	countEligibleSpentAddrs      = flag.Bool("count-eligible-spent-addrs", false, "whether to count how many eligible addresses for the migration are spent")
-	globalSnapshotFileName       = flag.String("global-snapshot-file", "global_snapshot.csv", "the name of the global snapshot file to generate")
-	genesisSnapshotFileName      = flag.String("genesis-snapshot-file", "genesis_snapshot.bin", "the name of the genesis snapshot file to generate")
-	genesisSnapshotFileNameAlt   = flag.String("genesis-snapshot-file-alt", "genesis_snapshot_alt.bin", "the name of the alternative genesis snapshot file to generate")
-	genesisSnapshotFileNetworkID = flag.String("genesis-snapshot-file-network-id", "mainnet1", "the network ID to put into the genesis snapshot")
-	genesisSnapshotTimestamp     = flag.Uint64("genesis-snapshot-file-timestamp", 0, "the timestamp to use for the genesis snapshot")
+	legacyNodeURI                   = flag.String("node", "http://localhost:14265", "the node URI of the legacy node to query")
+	minMigratedFundsAmount          = flag.Uint64("min-migration-token-amount", 1_000_000, "the minimum amount migrated funds must have")
+	countEligibleSpentAddrs         = flag.Bool("count-eligible-spent-addrs", false, "whether to count how many eligible addresses for the migration are spent")
+	globalSnapshotFileName          = flag.String("global-snapshot-file", "global_snapshot.csv", "the name of the global snapshot file to generate")
+	genesisSnapshotFileName         = flag.String("genesis-snapshot-file", "genesis_snapshot.bin", "the name of the genesis snapshot file to generate")
+	genesisSnapshotFileNameAlt      = flag.String("genesis-snapshot-file-alt", "genesis_snapshot_alt.bin", "the name of the alternative genesis snapshot file to generate")
+	genesisSnapshotFileNetworkID    = flag.String("genesis-snapshot-file-network-id", "c2-mainnet", "the network ID to put into the genesis snapshot")
+	genesisSnapshotFileNetworkIDAlt = flag.String("genesis-snapshot-file-network-id-alt", "c2-alt", "the alternative network ID to put into the genesis snapshot")
+	genesisSnapshotTimestamp        = flag.Uint64("genesis-snapshot-file-timestamp", 0, "the timestamp to use for the genesis snapshot")
 )
 
 var leftOutAddr = "TRANSFERXYPYSDGDTZYCLAEZLDY9BBOBRXO9IVU9HCKZSAZYMATBVDFW9ZAYECFDHDYWVCYANAABXBPB9"
@@ -160,7 +161,7 @@ func main() {
 	log.Printf("migration (alternative): addrs count %d, tokens total %d", len(migrationsWithLeftOutAddr), totalMigrationWithLeftOutAddr)
 	log.Println("generating genesis snapshot files...")
 	writeGenesisSnapshot(*genesisSnapshotFileName, *genesisSnapshotFileNetworkID, totalMigrationWithoutLeftOutAddr, migrationsWithoutLeftOutAddr)
-	writeGenesisSnapshot(*genesisSnapshotFileNameAlt, *genesisSnapshotFileNetworkID, totalMigrationWithLeftOutAddr, migrationsWithLeftOutAddr)
+	writeGenesisSnapshot(*genesisSnapshotFileNameAlt, *genesisSnapshotFileNetworkIDAlt, totalMigrationWithLeftOutAddr, migrationsWithLeftOutAddr)
 	log.Println("misc info:")
 	if *countEligibleSpentAddrs {
 		log.Printf("eligible for migration: addrs %d (spent %d, invalid last trit %d), tokens total %d",
