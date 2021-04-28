@@ -7,6 +7,6 @@ require (
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210406071024-a52cf8c2c21e
 	github.com/iotaledger/iota.go/v2 v2.0.0-20210409074803-07a6438d40cf
 	github.com/labstack/echo/v4 v4.2.0
-	github.com/prometheus/client_golang v1.9.0 // indirect
+	github.com/prometheus/client_golang v1.9.0
 	github.com/spf13/viper v1.7.1
 )
