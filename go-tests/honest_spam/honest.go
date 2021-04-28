@@ -17,23 +17,19 @@ var (
 	unconfirmedMessages        = make(map[string]struct{})
 )
 
-const (
-	nodeUrl  = LocalHost
-	apiPort  = ApiPort
-	mqttPort = MqttPort
-)
-
 func main() {
-	endpoint := flag.String("endpoint", fmt.Sprintf("http://%s:%d", nodeUrl, apiPort), "endpoint")
-	nodeAPI := iota.NewNodeHTTPAPIClient(*endpoint)
-	client := SetUpMqTT(nodeUrl, mqttPort, nil, nil, nil)
-	info, err := nodeAPI.Info()
-	Must(err)
+	nodeDomain, apiPort := DefineNodeFlags()
+	mqttPort := flag.Int("mqtt", MqttPort, "Mqtt port")
+	flag.Parse()
+
+	nodeAPI, nodeInfo := ObtainAPI(*nodeDomain, *apiPort)
+
+	client := SetUpMqTT(*nodeDomain, uint(*mqttPort), nil, nil, nil)
 
 	var i uint32 = 0
 	for {
 		i++
-		msg := CreateDataMessage(nodeAPI, &info.NetworkID, nil, "honest", string(i))
+		msg := CreateDataMessage(nodeAPI, &nodeInfo.NetworkID, nil, "honest", string(i))
 		message, err := nodeAPI.SubmitMessage(msg)
 		Must(err)
 		totalMessageCounter++
