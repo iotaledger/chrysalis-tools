@@ -88,7 +88,7 @@ func (httpAPI *HTTPAPIService) Run() error {
 
 		state := &StateResponse{}
 
-		treasuryRes, err := c2API.Treasury()
+		treasuryRes, err := c2API.Treasury(context.Background())
 		switch {
 		case err == nil:
 			state.TreasuryTokens = treasuryRes.Amount
@@ -127,7 +127,7 @@ func (httpAPI *HTTPAPIService) Run() error {
 	})
 
 	httpAPI.e.GET("/receipts/integrity", func(c echo.Context) error {
-		receipts, err := c2API.Receipts()
+		receipts, err := c2API.Receipts(context.Background())
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to retrieve receipts from C2 node: %v", err))
 		}
@@ -202,7 +202,7 @@ func (httpAPI *HTTPAPIService) Run() error {
 	})
 
 	httpAPI.e.GET("/recentlyMinted/:numReceipts", func(c echo.Context) error {
-		receipts, err := c2API.Receipts()
+		receipts, err := c2API.Receipts(context.Background())
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to retrieve receipts from C2 node: %v", err))
 		}

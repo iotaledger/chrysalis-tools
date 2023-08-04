@@ -13,16 +13,17 @@ import (
 	"sort"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/snapshot"
+	"golang.org/x/crypto/blake2b"
+
 	"github.com/iotaledger/chrysalis-tools/common"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/snapshot"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/iotaledger/iota.go/v2"
-	"golang.org/x/crypto/blake2b"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 var (
@@ -177,7 +178,7 @@ func writeGenesisSnapshot(fileName string, netID string, totalTokensMigrated uin
 	defer genesisSnapshotFile.Close()
 
 	genesisTreasuryOutput := &utxo.TreasuryOutput{
-		MilestoneID: iota.MilestoneID{},
+		MilestoneID: iotago.MilestoneID{},
 		Amount:      consts.TotalSupply - totalTokensMigrated,
 		Spent:       false,
 	}
@@ -188,7 +189,7 @@ func writeGenesisSnapshot(fileName string, netID string, totalTokensMigrated uin
 	fakeTransactionID := [32]byte{}
 	var fakeTransactionIDBoundary uint16
 	for _, migration := range migrations {
-		if outputIndex == iota.MaxOutputsCount {
+		if outputIndex == iotago.MaxOutputsCount {
 			outputIndex = 0
 			fakeTransactionIDBoundary++
 			binary.LittleEndian.PutUint16(fakeTransactionID[30:], fakeTransactionIDBoundary)
@@ -206,7 +207,7 @@ func writeGenesisSnapshot(fileName string, netID string, totalTokensMigrated uin
 			Amount:     migration.value,
 		}
 
-		edSeri := &iota.Ed25519Address{}
+		edSeri := &iotago.Ed25519Address{}
 		copy(edSeri[:], migration.ed25519Addr[:])
 		output.Address = edSeri
 
@@ -226,13 +227,13 @@ func writeGenesisSnapshot(fileName string, netID string, totalTokensMigrated uin
 
 		nullHashAdded = true
 
-		return hornet.GetNullMessageID(), nil
+		return hornet.NullMessageID(), nil
 	}
 
-	must(snapshot.StreamSnapshotDataTo(genesisSnapshotFile, *genesisSnapshotTimestamp, &snapshot.FileHeader{
+	_, err = snapshot.StreamSnapshotDataTo(genesisSnapshotFile, *genesisSnapshotTimestamp, &snapshot.FileHeader{
 		Version:              snapshot.SupportedFormatVersion,
 		Type:                 0,
-		NetworkID:            iota.NetworkIDFromString(netID),
+		NetworkID:            iotago.NetworkIDFromString(netID),
 		SEPMilestoneIndex:    0,
 		LedgerMilestoneIndex: 0,
 		TreasuryOutput:       genesisTreasuryOutput,
@@ -248,7 +249,8 @@ func writeGenesisSnapshot(fileName string, netID string, totalTokensMigrated uin
 	}, func() (*snapshot.MilestoneDiff, error) {
 		// no milestone diffs within genesis snapshot
 		return nil, nil
-	}))
+	})
+	must(err)
 
 	if supplyInSnapshot != consts.TotalSupply {
 		panic(fmt.Sprintf("supply in genesis snapshot does not equal total supply: %d vs. %d", supplyInSnapshot, consts.TotalSupply))

@@ -1,7 +1,7 @@
 ############################
 # Build
 ############################
-FROM golang:latest as build-env
+FROM golang:1.20-bullseye AS build
 
 # Set the current working directory inside the container
 RUN mkdir /migration-api
@@ -11,7 +11,6 @@ WORKDIR /migration-api
 COPY go.mod .
 COPY go.sum .
 
-ENV GO111MODULE=on
 RUN go mod download
 RUN go mod verify
 
@@ -24,12 +23,12 @@ RUN go build -ldflags='-w -s' -o /app/migration-api
 ############################
 # Image
 ############################
-FROM gcr.io/distroless/base
+FROM gcr.io/distroless/cc-debian11:nonroot
 
 EXPOSE 8484/tcp
 
 # Copy the binary into /app with write access
-COPY --from=build-env --chown=nonroot:nonroot /app /app
+COPY --from=build --chown=nonroot:nonroot /app /app
 WORKDIR /app
 
 # Copy the configuration

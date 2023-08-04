@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -31,7 +30,7 @@ func QueryLedgerState(legacyNodeURI string, lsmi int) (*GetLedgerStateReturn, er
 	defer res.Body.Close()
 
 	var resObj GetLedgerStateReturn
-	jsonRes, err := ioutil.ReadAll(res.Body)
+	jsonRes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body from ledger state query response: %w", err)
 	}
@@ -86,7 +85,7 @@ func QueryLedgerDiffExtended(legacyNodeURI string, milestoneIndex int) (*GetLedg
 	defer res.Body.Close()
 
 	var resObj GetLedgerDiffExtReturn
-	jsonRes, err := ioutil.ReadAll(res.Body)
+	jsonRes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body from ledger extended diff response: %w", err)
 	}
@@ -119,7 +118,7 @@ func QueryWhiteFlagConfirmation(legacyNodeURI string, milestoneIndex int) (*GetW
 	defer res.Body.Close()
 
 	var resObj GetWhiteFlagConfirmationResponse
-	jsonRes, err := ioutil.ReadAll(res.Body)
+	jsonRes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body from white-flag confirmation response: %w", err)
 	}
@@ -148,7 +147,7 @@ func buildLegacyRequest(legacyNodeURI string, body string) *http.Request {
 		},
 		Body: func() io.ReadCloser {
 			cmd := []byte(body)
-			return ioutil.NopCloser(bytes.NewReader(cmd))
+			return io.NopCloser(bytes.NewReader(cmd))
 		}(),
 	}
 }

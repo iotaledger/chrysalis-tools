@@ -9,10 +9,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/snapshot"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 var (
@@ -55,7 +56,6 @@ func main() {
 	var readHeader *snapshot.ReadFileHeader
 	var seps []hornet.MessageID
 	var outputs []*snapshot.Output
-	var treasuryOutput *utxo.TreasuryOutput
 	var msDiffs []*snapshot.MilestoneDiff
 	must(snapshot.StreamSnapshotDataFrom(sourceFile, func(header *snapshot.ReadFileHeader) error {
 		readHeader = header
@@ -67,7 +67,7 @@ func main() {
 		outputs = append(outputs, output)
 		return nil
 	}, func(output *utxo.TreasuryOutput) error {
-		treasuryOutput = output
+		// the treasury is part of the readHeader anyway
 		return nil
 	}, func(milestoneDiff *snapshot.MilestoneDiff) error {
 		msDiffs = append(msDiffs, milestoneDiff)
@@ -75,7 +75,7 @@ func main() {
 	}))
 
 	var sepsIndex, outputsIndex int
-	err, _ = snapshot.StreamSnapshotDataTo(targetFile, readHeader.Timestamp, &readHeader.FileHeader, func() (hornet.MessageID, error) {
+	_, err = snapshot.StreamSnapshotDataTo(targetFile, readHeader.Timestamp, &readHeader.FileHeader, func() (hornet.MessageID, error) {
 		if sepsIndex == len(seps) {
 			return nil, nil
 		}
@@ -89,7 +89,7 @@ func main() {
 		output := outputs[outputsIndex]
 
 		// alter the output ID to incorporate the network ID
-		binary.LittleEndian.PutUint64(output.OutputID[:iotago.UInt64ByteSize], netIDNum)
+		binary.LittleEndian.PutUint64(output.OutputID[:serializer.UInt64ByteSize], netIDNum)
 
 		outputsIndex++
 		return output, nil
