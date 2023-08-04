@@ -1,7 +1,7 @@
 ############################
 # Build
 ############################
-FROM golang:latest as build-env
+FROM golang:1.20-bullseye AS build
 
 # Set the current working directory inside the container
 RUN mkdir /wfmock
@@ -23,12 +23,12 @@ RUN go build -ldflags='-w -s' -o /app/wfmock
 ############################
 # Image
 ############################
-FROM gcr.io/distroless/base
+FROM gcr.io/distroless/cc-debian11:nonroot
 
 EXPOSE 14266/tcp
 
 # Copy the binary into /app with write access
-COPY --from=build-env --chown=nonroot:nonroot /app /app
+COPY --from=build --chown=nonroot:nonroot /app /app
 WORKDIR /app
 
 # Copy the configuration
