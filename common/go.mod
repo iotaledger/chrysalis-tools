@@ -1,5 +1,7 @@
 module github.com/iotaledger/chrysalis-tools/common
 
-go 1.16
+go 1.20
 
-require github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7
+require github.com/iotaledger/iota.go v1.0.0
+
+require github.com/pkg/errors v0.8.1 // indirect

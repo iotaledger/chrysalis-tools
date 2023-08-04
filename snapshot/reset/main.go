@@ -2,12 +2,13 @@
 package main
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -15,10 +16,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hornet/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -47,7 +48,7 @@ func main() {
 	flag.Parse()
 
 	nodeHTTPClient := iotago.NewNodeHTTPAPIClient(*nodeURI)
-	info, err := nodeHTTPClient.Info()
+	info, err := nodeHTTPClient.Info(context.Background())
 	must(err)
 
 	uri := fmt.Sprintf("%s%s", *nodeURI, *utxosRoute)
@@ -58,7 +59,7 @@ func main() {
 	must(err)
 	defer res.Body.Close()
 
-	bodyContent, err := ioutil.ReadAll(res.Body)
+	bodyContent, err := io.ReadAll(res.Body)
 	must(err)
 
 	if res.StatusCode != http.StatusOK {
@@ -86,7 +87,7 @@ func main() {
 			}
 			go func(index int, outputIdHex string) {
 				defer wg.Done()
-				outputRes, err := nodeHTTPClient.OutputByID(iotago.OutputIDHex(outputIdHex).MustAsUTXOInput().ID())
+				outputRes, err := nodeHTTPClient.OutputByID(context.Background(), iotago.OutputIDHex(outputIdHex).MustAsUTXOInput().ID())
 				must(err)
 				utxosMu.Lock()
 				utxos[index] = outputRes
@@ -100,7 +101,7 @@ func main() {
 	fmt.Println()
 
 	log.Printf("querying treasury")
-	treasuryRes, err := nodeHTTPClient.Treasury()
+	treasuryRes, err := nodeHTTPClient.Treasury(context.Background())
 	must(err)
 	log.Printf("treasury size: %d", treasuryRes.Amount)
 
@@ -133,7 +134,7 @@ func main() {
 		}
 
 		nullHashAdded = true
-		return hornet.GetNullMessageID(), nil
+		return hornet.NullMessageID(), nil
 	}
 
 	// unspent transaction outputs
@@ -176,7 +177,7 @@ func main() {
 	milestoneDiffProducerFunc := func() (*snapshot.MilestoneDiff, error) { return nil, nil }
 
 	log.Println("streaming data into snapshot file...")
-	err, _ = snapshot.StreamSnapshotDataTo(snapshotFile, uint64(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc)
+	_, err = snapshot.StreamSnapshotDataTo(snapshotFile, uint64(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc)
 	must(err)
 
 	log.Printf("done, took %v", time.Since(s))

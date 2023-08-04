@@ -10,12 +10,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/iotaledger/chrysalis-tools/common"
-	"github.com/iotaledger/iota.go/api"
-	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/iotaledger/chrysalis-tools/common"
+	"github.com/iotaledger/iota.go/api"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // NewPromMetricsService creates a new PromMetricsService with the given options.
@@ -247,7 +248,7 @@ func (pms *PromMetricsService) queryIncludedTails() (int, int, error) {
 
 // queries the amount of newly applied receipt entries since the last queried C2 milestone.
 func (pms *PromMetricsService) queryC2NodeReceipts() (int, int, error) {
-	c2Info, err := pms.c2API.Info()
+	c2Info, err := pms.c2API.Info(context.Background())
 	if err != nil {
 		return 0, 0, fmt.Errorf("unable to query info from c2 node: %w", err)
 	}
@@ -267,7 +268,7 @@ func (pms *PromMetricsService) queryC2NodeReceipts() (int, int, error) {
 		if pms.cfg.Debug {
 			log.Printf("querying C2 milestone %d", i)
 		}
-		msRes, err := pms.c2API.MilestoneByIndex(uint32(i))
+		msRes, err := pms.c2API.MilestoneByIndex(context.Background(), uint32(i))
 		if err != nil {
 			return 0, 0, fmt.Errorf("unable to query milestone %d from c2 node: %w", i, err)
 		}
@@ -279,7 +280,7 @@ func (pms *PromMetricsService) queryC2NodeReceipts() (int, int, error) {
 		var msID iotago.MessageID
 		copy(msID[:], msgIDBytes)
 
-		msg, err := pms.c2API.MessageByMessageID(msID)
+		msg, err := pms.c2API.MessageByMessageID(context.Background(), msID)
 		if err != nil {
 			return 0, 0, fmt.Errorf("unable to query msg containing milestone %d from c2 node: %w", i, err)
 		}

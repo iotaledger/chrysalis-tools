@@ -11,7 +11,6 @@ WORKDIR /migration-api
 COPY go.mod .
 COPY go.sum .
 
-ENV GO111MODULE=on
 RUN go mod download
 RUN go mod verify
 
